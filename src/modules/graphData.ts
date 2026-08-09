@@ -172,6 +172,7 @@ export function buildCurrentCollectionGraph(
       const creators = item
         .getCreatorsJSON()
         .filter((creator) => creator.creatorType === "author")
+        .slice(0, 1)
         .map(creatorName)
         .filter(Boolean);
       const date = String(item.getField("date", true, true) || "");

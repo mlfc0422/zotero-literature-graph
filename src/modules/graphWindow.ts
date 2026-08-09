@@ -23,8 +23,8 @@ const STYLES = `
   input[type=search] { width: 220px; padding: 7px 10px; border: 1px solid #c8ccd1; border-radius: 6px; }
   main { min-height: 0; display: grid; grid-template-columns: 1fr 310px; }
   #canvas { position: relative; min-width: 0; background: radial-gradient(circle at center, #fff, #f4f6f8); }
-  svg { display: block; width: 100%; height: 100%; cursor: grab; }
-  svg:active { cursor: grabbing; }
+  svg { display: block; width: 100%; height: 100%; cursor: grab; user-select: none; }
+  svg.is-panning { cursor: grabbing; }
   aside { overflow: auto; background: #fff; border-left: 1px solid #dfe1e5; padding: 16px; }
   #summary { color: #62676d; margin-bottom: 14px; }
   #detail-title { margin: 0 0 10px; font-size: 16px; }
@@ -244,13 +244,7 @@ export class GraphWindowController {
       .insert<any>("svg", "#empty")
       .attr("viewBox", [0, 0, width, height]);
     const viewport = svg.append("g");
-    svg.call(
-      d3
-        .zoom<any, unknown>()
-        .scaleExtent([0.15, 5])
-        .touchable(false)
-        .on("zoom", (event) => viewport.attr("transform", event.transform)),
-    );
+    this.registerCanvasNavigation(svg, viewport);
 
     const link = viewport
       .append("g")
@@ -332,6 +326,7 @@ export class GraphWindowController {
       d3
         .drag<any, SimNode>()
         .touchable(false)
+        .filter((event) => event.type === "mousedown")
         .on("start", (event, node) => {
           if (!event.active) this.simulation?.alphaTarget(0.3).restart();
           node.fx = node.x;
@@ -364,6 +359,55 @@ export class GraphWindowController {
     }
     const query = (doc.getElementById("search") as HTMLInputElement).value;
     if (query) this.applyHighlight(query);
+  }
+
+  private registerCanvasNavigation(
+    svg: d3.Selection<any, unknown, null, undefined>,
+    viewport: d3.Selection<any, unknown, null, undefined>,
+  ): void {
+    let transform = d3.zoomIdentity;
+    let panning = false;
+    let previousPoint: [number, number] | undefined;
+    const svgNode = svg.node() as SVGSVGElement;
+    const update = () => viewport.attr("transform", transform.toString());
+
+    svg
+      .on("wheel.graph-navigation", (event: WheelEvent) => {
+        event.preventDefault();
+        const [x, y] = d3.pointer(event, svgNode);
+        const factor = Math.pow(2, -event.deltaY * 0.002);
+        const scale = Math.max(0.15, Math.min(5, transform.k * factor));
+        transform = transform
+          .translate(x, y)
+          .scale(scale / transform.k)
+          .translate(-x, -y);
+        update();
+      })
+      .on("mousedown.graph-navigation", (event: MouseEvent) => {
+        const target = event.target as {
+          closest?: (selector: string) => Element | null;
+        };
+        if (event.button !== 0 || target.closest?.(".node")) return;
+        panning = true;
+        previousPoint = d3.pointer(event, svgNode);
+        svg.classed("is-panning", true);
+        event.preventDefault();
+      })
+      .on("mousemove.graph-navigation", (event: MouseEvent) => {
+        if (!panning || !previousPoint) return;
+        const point = d3.pointer(event, svgNode);
+        transform = transform.translate(
+          (point[0] - previousPoint[0]) / transform.k,
+          (point[1] - previousPoint[1]) / transform.k,
+        );
+        previousPoint = point;
+        update();
+      })
+      .on("mouseup.graph-navigation mouseleave.graph-navigation", () => {
+        panning = false;
+        previousPoint = undefined;
+        svg.classed("is-panning", false);
+      });
   }
 
   private applyHighlight(query: string): void {
