@@ -22,6 +22,12 @@ npm run lint:check
 
 构建生成的 XPI 位于 `.scaffold/build/`。
 
+##Todo
+可视化
+Cytoscape.js
+布局
+Force-directed
+
 ## 许可
 
 AGPL-3.0-or-later
