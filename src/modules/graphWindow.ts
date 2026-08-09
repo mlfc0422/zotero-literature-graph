@@ -293,7 +293,11 @@ export class GraphWindowController {
         },
         {
           selector: "node.tag",
-          style: { "background-color": "#374151", "border-color": "#1f2937" },
+          style: {
+            "background-color": "#374151",
+            "border-color": "#1f2937",
+            "text-opacity": 1,
+          },
         },
         {
           selector: "node.core",
@@ -304,6 +308,7 @@ export class GraphWindowController {
             "border-color": "#475569",
           },
         },
+        { selector: "node.label-visible", style: { "text-opacity": 1 } },
         {
           selector: "edge",
           style: {
@@ -334,9 +339,9 @@ export class GraphWindowController {
         animate: false,
         fit: true,
         padding: 72,
-        nodeRepulsion: () => 26000,
+        nodeRepulsion: () => 10000,
         idealEdgeLength: (edge) =>
-          Math.max(145, 240 - Number(edge.data("weight")) * 24),
+          Math.max(49, 80 - Number(edge.data("weight")) * 8),
         gravity: 0.04,
         gravityRange: 3.5,
         componentSpacing: 100,
@@ -385,6 +390,52 @@ export class GraphWindowController {
       target: edge.target().id(),
       weight: Number(edge.data("weight")),
     }));
+    const neighbours = new Map(
+      physicsNodes.map((node) => [node.id, new Set<string>()]),
+    );
+    for (const link of physicsLinks) {
+      const source = String(link.source);
+      const target = String(link.target);
+      neighbours.get(source)?.add(target);
+      neighbours.get(target)?.add(source);
+    }
+    const componentByNode = new Map<string, number>();
+    let componentCount = 0;
+    for (const node of physicsNodes) {
+      if (componentByNode.has(node.id)) continue;
+      const queue = [node.id];
+      componentByNode.set(node.id, componentCount);
+      for (const id of queue) {
+        for (const neighbour of neighbours.get(id) ?? []) {
+          if (!componentByNode.has(neighbour)) {
+            componentByNode.set(neighbour, componentCount);
+            queue.push(neighbour);
+          }
+        }
+      }
+      componentCount += 1;
+    }
+    const columns = Math.ceil(Math.sqrt(componentCount));
+    const rows = Math.ceil(componentCount / columns);
+    const componentGapX = Math.min(
+      180,
+      Math.max(120, (cy.width() - 180) / Math.max(1, columns - 1)),
+    );
+    const componentGapY = Math.min(
+      155,
+      Math.max(105, (cy.height() - 160) / Math.max(1, rows - 1)),
+    );
+    const componentTargets = Array.from(
+      { length: componentCount },
+      (_, index) => {
+        const column = index % columns;
+        const row = Math.floor(index / columns);
+        return {
+          x: cy.width() / 2 + (column - (columns - 1) / 2) * componentGapX,
+          y: cy.height() / 2 + (row - (rows - 1) / 2) * componentGapY,
+        };
+      },
+    );
     const simulation = d3
       .forceSimulation(physicsNodes)
       .force(
@@ -392,15 +443,30 @@ export class GraphWindowController {
         d3
           .forceLink<PhysicsNode, PhysicsLink>(physicsLinks)
           .id((node) => node.id)
-          .distance((link) => Math.max(145, 240 - link.weight * 24))
-          .strength(0.14),
+          .distance((link) => Math.max(44, 72 - link.weight * 6.5))
+          .strength(0.7),
       )
-      .force("charge", d3.forceManyBody().strength(-900))
+      .force("charge", d3.forceManyBody().strength(-300))
       .force(
         "collide",
-        d3.forceCollide<PhysicsNode>().radius((node) => node.radius + 14),
+        d3.forceCollide<PhysicsNode>().radius((node) => node.radius + 6),
       )
-      .force("center", d3.forceCenter(cy.width() / 2, cy.height() / 2))
+      .force(
+        "component-x",
+        d3
+          .forceX<PhysicsNode>(
+            (node) => componentTargets[componentByNode.get(node.id) ?? 0].x,
+          )
+          .strength(0.038),
+      )
+      .force(
+        "component-y",
+        d3
+          .forceY<PhysicsNode>(
+            (node) => componentTargets[componentByNode.get(node.id) ?? 0].y,
+          )
+          .strength(0.038),
+      )
       .velocityDecay(0.46)
       .alphaDecay(0.035)
       .alphaTarget(0.012)
@@ -467,6 +533,8 @@ export class GraphWindowController {
     if (!this.cy || !this.data) return;
     const current = this.cy.getElementById(node.id);
     const neighborhood = current.closedNeighborhood();
+    this.cy.nodes().removeClass("label-visible");
+    neighborhood.nodes().addClass("label-visible");
     this.cy.elements().addClass("dimmed").removeClass("selected active");
     neighborhood.removeClass("dimmed");
     current.addClass("selected");
