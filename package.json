@@ -1,7 +1,7 @@
 {
   "name": "zotero-puls",
   "type": "module",
-  "version": "0.3.4",
+  "version": "0.5.0",
   "description": "Visualize author-tag relationships in Zotero collections",
   "config": {
     "addonName": "Zotero Puls",
@@ -28,7 +28,9 @@
     "update-deps": "npm update --save"
   },
   "dependencies": {
+    "@types/d3-force": "^3.0.10",
     "cytoscape": "^3.34.0",
+    "d3-force": "^3.0.0",
     "zotero-plugin-toolkit": "^5.2.0"
   },
   "devDependencies": {

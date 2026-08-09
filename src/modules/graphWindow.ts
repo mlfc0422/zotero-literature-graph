@@ -1,9 +1,20 @@
 import type cytoscape from "cytoscape";
+import type { SimulationLinkDatum, SimulationNodeDatum } from "d3-force";
 import type { GraphData, GraphNode } from "./graphData";
 import { buildCurrentCollectionGraph, GraphDataError } from "./graphData";
 import { isWindowAlive } from "../utils/window";
 
 let createCytoscape: typeof cytoscape | undefined;
+let d3Force: typeof import("d3-force") | undefined;
+
+interface PhysicsNode extends SimulationNodeDatum {
+  id: string;
+  radius: number;
+}
+
+interface PhysicsLink extends SimulationLinkDatum<PhysicsNode> {
+  weight: number;
+}
 
 async function getCytoscape(win: Window): Promise<typeof cytoscape> {
   if (!createCytoscape) {
@@ -25,6 +36,11 @@ async function getCytoscape(win: Window): Promise<typeof cytoscape> {
   return createCytoscape;
 }
 
+async function getD3Force(): Promise<typeof import("d3-force")> {
+  d3Force ??= await import("d3-force");
+  return d3Force;
+}
+
 const STYLES = `
   :root { color-scheme: light dark; font: 14px system-ui, sans-serif; }
   * { box-sizing: border-box; }
@@ -35,14 +51,14 @@ const STYLES = `
   label { display: flex; gap: 7px; align-items: center; white-space: nowrap; }
   input[type=search] { width: 220px; padding: 7px 10px; border: 1px solid #c8ccd1; border-radius: 6px; }
   main { min-height: 0; display: grid; grid-template-columns: 1fr 310px; }
-  #canvas { min-width: 0; min-height: 0; background: radial-gradient(circle at center, #fff, #eef2f7); }
+  #canvas { min-width: 0; min-height: 0; background: radial-gradient(circle at center, #ffffff, #f1f3f5); }
   aside { overflow: auto; background: #fff; border-left: 1px solid #dfe1e5; padding: 16px; }
   #summary { color: #5d6875; margin-bottom: 12px; font-weight: 600; }
   #legend { display: flex; gap: 12px; margin-bottom: 14px; color: #5d6875; font-size: 12px; }
   .legend-item { display: flex; align-items: center; gap: 5px; }
   .legend-dot { width: 10px; height: 10px; display: inline-block; border-radius: 50%; }
-  .legend-dot.author { background: #4f46e5; }
-  .legend-dot.tag { background: #059669; border-radius: 2px; }
+  .legend-dot.author { background: #d1d5db; border: 1px solid #9ca3af; }
+  .legend-dot.tag { background: #374151; }
   #gesture-help { color: #73777c; font-size: 12px; margin: -4px 0 15px; }
   #detail-title { margin: 0 0 10px; font-size: 16px; }
   #papers { list-style: none; padding: 0; margin: 0; }
@@ -79,6 +95,7 @@ export class GraphWindowController {
   private window?: Window;
   private cy?: cytoscape.Core;
   private resizeObserver?: ResizeObserver;
+  private stopPhysics?: () => void;
   private cleanups: Array<() => void> = [];
   private data?: GraphData;
 
@@ -207,6 +224,8 @@ export class GraphWindowController {
   private async render(data?: GraphData): Promise<void> {
     const doc = this.window?.document;
     if (!doc || !data) return;
+    this.stopPhysics?.();
+    this.stopPhysics = undefined;
     this.cy?.destroy();
     this.resizeObserver?.disconnect();
     const slider = doc.getElementById("threshold") as HTMLInputElement;
@@ -220,6 +239,17 @@ export class GraphWindowController {
     );
     const ids = new Set(edges.flatMap((edge) => [edge.source, edge.target]));
     const nodes = data.nodes.filter((node) => ids.has(node.id));
+    const sortedCounts = nodes
+      .map((node) => node.count)
+      .sort((left, right) => right - left);
+    const topTenPercent =
+      sortedCounts[Math.max(0, Math.ceil(sortedCounts.length * 0.1) - 1)] ?? 3;
+    const coreThreshold = Math.max(3, topTenPercent);
+    const visualNodes = nodes.map((node) => ({
+      ...node,
+      size: Math.min(54, 22 + Math.sqrt(Math.max(0, node.count - 1)) * 8),
+      isCore: node.count >= coreThreshold,
+    }));
     if (!edges.length) return this.showEmpty("当前权重阈值下没有可显示的关系");
     this.hideEmpty();
     (doc.getElementById("heading") as HTMLElement).textContent =
@@ -233,7 +263,10 @@ export class GraphWindowController {
     this.cy = cytoscapeFactory({
       container,
       elements: [
-        ...nodes.map((node) => ({ data: { ...node }, classes: node.type })),
+        ...visualNodes.map((node) => ({
+          data: { ...node },
+          classes: `${node.type}${node.isCore ? " core" : ""}`,
+        })),
         ...edges.map((edge) => ({ data: { ...edge } })),
       ],
       style: [
@@ -247,26 +280,38 @@ export class GraphWindowController {
             "text-opacity": 0,
             "text-outline-color": "#ffffff",
             "text-outline-width": 3,
-            width: "mapData(count, 1, 12, 18, 42)",
-            height: "mapData(count, 1, 12, 18, 42)",
+            shape: "ellipse",
+            width: "data(size)",
+            height: "data(size)",
             "border-width": 2,
             "border-color": "#ffffff",
           },
         },
         {
           selector: "node.author",
-          style: { shape: "ellipse", "background-color": "#4f46e5" },
+          style: { "background-color": "#d1d5db", "border-color": "#9ca3af" },
         },
         {
           selector: "node.tag",
-          style: { shape: "round-rectangle", "background-color": "#059669" },
+          style: { "background-color": "#374151", "border-color": "#1f2937" },
+        },
+        {
+          selector: "node.core",
+          style: {
+            "text-opacity": 1,
+            "font-size": 12,
+            "border-width": 4,
+            "border-color": "#475569",
+          },
         },
         {
           selector: "edge",
           style: {
-            width: "mapData(weight, 1, 8, 1, 7)",
-            "line-color": "#8b98a8",
-            opacity: 0.3,
+            width: "mapData(weight, 1, 8, 1, 5)",
+            "line-color": "#94a3b8",
+            "curve-style": "bezier",
+            opacity: (edge: cytoscape.EdgeSingular) =>
+              Math.min(0.68, 0.1 + (Number(edge.data("weight")) - 1) * 0.08),
           },
         },
         {
@@ -281,18 +326,22 @@ export class GraphWindowController {
         { selector: ".dimmed", style: { opacity: 0.08 } },
         {
           selector: "edge.active",
-          style: { "line-color": "#d97706", opacity: 0.95 },
+          style: { "line-color": "#334155", opacity: 0.95 },
         },
       ],
       layout: {
         name: "cose",
         animate: false,
         fit: true,
-        padding: 48,
-        nodeRepulsion: () => 9000,
+        padding: 72,
+        nodeRepulsion: () => 26000,
         idealEdgeLength: (edge) =>
-          Math.max(70, 170 - Number(edge.data("weight")) * 10),
-        gravity: 0.2,
+          Math.max(145, 240 - Number(edge.data("weight")) * 24),
+        gravity: 0.04,
+        gravityRange: 3.5,
+        componentSpacing: 100,
+        nodeOverlap: 14,
+        numIter: 1600,
       } as cytoscape.LayoutOptions,
       wheelSensitivity: 0.18,
       minZoom: 0.15,
@@ -306,6 +355,7 @@ export class GraphWindowController {
     this.cy.on("mouseout", "node", (event) =>
       event.target.removeClass("match"),
     );
+    await this.startPhysics();
     const ResizeObserverClass = this.window?.ResizeObserver;
     if (ResizeObserverClass) {
       const resizeObserver = new ResizeObserverClass(() =>
@@ -315,6 +365,78 @@ export class GraphWindowController {
       resizeObserver.observe(container);
     }
     this.applySearch((doc.getElementById("search") as HTMLInputElement).value);
+  }
+
+  private async startPhysics(): Promise<void> {
+    const cy = this.cy;
+    if (!cy) return;
+    const d3 = await getD3Force();
+    if (cy !== this.cy) return;
+
+    const physicsNodes: PhysicsNode[] = cy.nodes().map((node) => ({
+      id: node.id(),
+      x: node.position("x"),
+      y: node.position("y"),
+      radius: Number(node.data("size")) / 2,
+    }));
+    const nodeById = new Map(physicsNodes.map((node) => [node.id, node]));
+    const physicsLinks: PhysicsLink[] = cy.edges().map((edge) => ({
+      source: edge.source().id(),
+      target: edge.target().id(),
+      weight: Number(edge.data("weight")),
+    }));
+    const simulation = d3
+      .forceSimulation(physicsNodes)
+      .force(
+        "link",
+        d3
+          .forceLink<PhysicsNode, PhysicsLink>(physicsLinks)
+          .id((node) => node.id)
+          .distance((link) => Math.max(145, 240 - link.weight * 24))
+          .strength(0.14),
+      )
+      .force("charge", d3.forceManyBody().strength(-900))
+      .force(
+        "collide",
+        d3.forceCollide<PhysicsNode>().radius((node) => node.radius + 14),
+      )
+      .force("center", d3.forceCenter(cy.width() / 2, cy.height() / 2))
+      .velocityDecay(0.46)
+      .alphaDecay(0.035)
+      .alphaTarget(0.012)
+      .on("tick", () => {
+        if (cy !== this.cy) return;
+        cy.batch(() => {
+          for (const node of cy.nodes()) {
+            const physicsNode = nodeById.get(node.id());
+            if (!physicsNode || node.grabbed()) continue;
+            if (
+              Number.isFinite(physicsNode.x) &&
+              Number.isFinite(physicsNode.y)
+            ) {
+              node.position({ x: physicsNode.x!, y: physicsNode.y! });
+            }
+          }
+        });
+      });
+
+    const pinNode = (event: cytoscape.EventObjectNode) => {
+      const physicsNode = nodeById.get(event.target.id());
+      if (!physicsNode) return;
+      physicsNode.fx = event.target.position("x");
+      physicsNode.fy = event.target.position("y");
+      simulation.alphaTarget(0.28).restart();
+    };
+    const settle = () => simulation.alphaTarget(0.012).restart();
+    cy.on("grab", "node", pinNode);
+    cy.on("drag", "node", pinNode);
+    cy.on("dragfree", "node", settle);
+    this.stopPhysics = () => {
+      simulation.stop();
+      cy.off("grab", "node", pinNode);
+      cy.off("drag", "node", pinNode);
+      cy.off("dragfree", "node", settle);
+    };
   }
 
   private applySearch(query: string): void {
@@ -377,6 +499,8 @@ export class GraphWindowController {
   }
 
   private showEmpty(message: string): void {
+    this.stopPhysics?.();
+    this.stopPhysics = undefined;
     this.cy?.destroy();
     const doc = this.window?.document;
     if (!doc) return;
@@ -399,6 +523,8 @@ export class GraphWindowController {
   }
 
   private disposeWindow(): void {
+    this.stopPhysics?.();
+    this.stopPhysics = undefined;
     this.cy?.destroy();
     this.cy = undefined;
     this.resizeObserver?.disconnect();
