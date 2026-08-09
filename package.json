@@ -1,24 +1,21 @@
 {
-  "name": "zotero-plugin-template",
+  "name": "zotero-puls",
   "type": "module",
-  "version": "3.1.0",
-  "description": "Zotero Plugin Template",
+  "version": "0.1.0",
+  "description": "Visualize author-tag relationships in Zotero collections",
   "config": {
-    "addonName": "Zotero Plugin Template",
-    "addonID": "addontemplate@euclpts.com",
-    "addonRef": "addontemplate",
-    "addonInstance": "AddonTemplate",
-    "prefsPrefix": "extensions.zotero.addontemplate"
+    "addonName": "Zotero Puls",
+    "addonID": "zotero-puls@local",
+    "addonRef": "zoteropuls",
+    "addonInstance": "ZoteroPuls",
+    "prefsPrefix": "extensions.zotero.zoteropuls"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/windingwind/zotero-plugin-template.git"
+    "url": "https://github.com/mlfc0422/zotero-literature-graph.git"
   },
-  "author": "windingwind",
-  "bugs": {
-    "url": "https://github.com/windingwind/zotero-plugin-template/issues"
-  },
-  "homepage": "https://github.com/windingwind/zotero-plugin-template#readme",
+  "author": "Ricardo",
+  "homepage": "https://github.com/mlfc0422/zotero-literature-graph",
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "start": "zotero-plugin serve",
@@ -27,20 +24,25 @@
     "lint:fix": "prettier --write . && eslint . --fix",
     "release": "zotero-plugin release",
     "test": "zotero-plugin test",
+    "test:unit": "node --import tsx node_modules/mocha/bin/mocha.js test/graphData.test.ts",
     "update-deps": "npm update --save"
   },
   "dependencies": {
+    "d3": "^7.9.0",
     "zotero-plugin-toolkit": "^5.2.0"
   },
   "devDependencies": {
     "@types/chai": "^5.2.3",
+    "@types/d3": "^7.4.3",
     "@types/mocha": "^10.0.10",
     "@types/node": "^24.10.0",
     "@zotero-plugin/eslint-config": "^0.6.10",
     "chai": "^6.2.2",
     "eslint": "^9.39.2",
+    "jsonc-parser": "^3.3.1",
     "mocha": "^11.8.0",
     "prettier": "^3.9.6",
+    "tsx": "^4.23.11",
     "typescript": "^5.9.3",
     "zotero-plugin-scaffold": "^0.8.8",
     "zotero-types": "^4.1.3"

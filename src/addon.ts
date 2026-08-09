@@ -1,6 +1,6 @@
 import { config } from "../package.json";
-import { ColumnOptions, DialogHelper } from "zotero-plugin-toolkit";
-import hooks from "./hooks";
+import type { GraphData } from "./modules/graphData";
+import hooks, { pluginApi } from "./hooks";
 import { createZToolkit } from "./utils/ztoolkit";
 
 class Addon {
@@ -14,17 +14,14 @@ class Addon {
     locale?: {
       current: any;
     };
-    prefs?: {
-      window: Window;
-      columns: Array<ColumnOptions>;
-      rows: Array<{ [dataKey: string]: string }>;
-    };
-    dialog?: DialogHelper;
   };
   // Lifecycle hooks
   public hooks: typeof hooks;
   // APIs
-  public api: object;
+  public api: {
+    buildCurrentCollectionGraph: (win?: _ZoteroTypes.MainWindow) => GraphData;
+    openGraphWindow: (win?: _ZoteroTypes.MainWindow) => void;
+  };
 
   constructor() {
     this.data = {
@@ -35,7 +32,11 @@ class Addon {
       ztoolkit: createZToolkit(),
     };
     this.hooks = hooks;
-    this.api = {};
+    this.api = {
+      buildCurrentCollectionGraph: (win) =>
+        pluginApi.buildCurrentCollectionGraph(win),
+      openGraphWindow: (win) => pluginApi.openGraphWindow(win),
+    };
   }
 }
 
