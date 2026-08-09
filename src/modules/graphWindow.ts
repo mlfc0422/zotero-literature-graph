@@ -356,6 +356,12 @@ export class GraphWindowController {
       const node = data.nodes.find((entry) => entry.id === event.target.id());
       if (node) this.selectNode(node);
     });
+    this.cy.on("tap", (event) => {
+      if (event.target === this.cy) this.clearSelection();
+    });
+    this.cy.on("dbltap", (event) => {
+      if (event.target === this.cy) void this.refresh();
+    });
     this.cy.on("mouseover", "node", (event) => event.target.addClass("match"));
     this.cy.on("mouseout", "node", (event) =>
       event.target.removeClass("match"),
@@ -556,6 +562,18 @@ export class GraphWindowController {
       });
       item.addEventListener("dblclick", () => this.locatePaper(paper.id));
     }
+  }
+
+  private clearSelection(): void {
+    if (!this.cy || !this.window) return;
+    this.cy.elements().removeClass("dimmed selected active");
+    this.cy.nodes().removeClass("label-visible");
+    const doc = this.window.document;
+    const search = doc.getElementById("search") as HTMLInputElement;
+    this.applySearch(search.value);
+    (doc.getElementById("detail-title") as HTMLElement).textContent =
+      "关联论文";
+    (doc.getElementById("papers") as HTMLUListElement).replaceChildren();
   }
 
   private locatePaper(id: number): void {
