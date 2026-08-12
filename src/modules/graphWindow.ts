@@ -16,6 +16,15 @@ interface PhysicsLink extends SimulationLinkDatum<PhysicsNode> {
   weight: number;
 }
 
+interface ForceBalanceProfile {
+  value: number;
+  label: string;
+  distanceScale: number;
+  repulsionScale: number;
+  attractionScale: number;
+  linkStrength: number;
+}
+
 async function getCytoscape(win: Window): Promise<typeof cytoscape> {
   if (!createCytoscape) {
     // Cytoscape expects browser globals at module initialization. Zotero plugin
@@ -191,6 +200,17 @@ export class GraphWindowController {
     threshold.type = "range";
     threshold.min = threshold.value = "1";
     append(doc, thresholdLabel, "span", { id: "threshold-value", text: "1" });
+    const distanceLabel = append(doc, header, "label", { text: "力平衡" });
+    const distance = append(doc, distanceLabel, "input", { id: "distance" });
+    distance.type = "range";
+    distance.min = "0";
+    distance.max = "200";
+    distance.step = "5";
+    distance.value = "100";
+    append(doc, distanceLabel, "span", {
+      id: "distance-value",
+      text: "100 · 均衡",
+    });
     const main = append(doc, app, "main");
     append(doc, main, "section", { id: "canvas" });
     const aside = append(doc, main, "aside");
@@ -213,11 +233,18 @@ export class GraphWindowController {
     append(doc, aside, "div", { id: "empty" });
     const searchHandler = () => this.applySearch(search.value);
     const thresholdHandler = () => void this.render(this.data);
+    const distanceHandler = () => {
+      (doc.getElementById("distance-value") as HTMLElement).textContent =
+        this.getForceBalanceProfile().label;
+      void this.render(this.data);
+    };
     search.addEventListener("input", searchHandler);
     threshold.addEventListener("input", thresholdHandler);
+    distance.addEventListener("input", distanceHandler);
     this.cleanups.push(
       () => search.removeEventListener("input", searchHandler),
       () => threshold.removeEventListener("input", thresholdHandler),
+      () => distance.removeEventListener("input", distanceHandler),
     );
   }
 
@@ -252,6 +279,7 @@ export class GraphWindowController {
     }));
     if (!edges.length) return this.showEmpty("当前权重阈值下没有可显示的关系");
     this.hideEmpty();
+    const forceProfile = this.getForceBalanceProfile();
     (doc.getElementById("heading") as HTMLElement).textContent =
       `${data.collection.name} · 作者—标签关系网`;
     (doc.getElementById("summary") as HTMLElement).textContent =
@@ -339,13 +367,16 @@ export class GraphWindowController {
         animate: false,
         fit: true,
         padding: 72,
-        nodeRepulsion: () => 10000,
+        nodeRepulsion: () => 10000 * forceProfile.repulsionScale,
         idealEdgeLength: (edge) =>
-          Math.max(49, 80 - Number(edge.data("weight")) * 8),
-        gravity: 0.04,
-        gravityRange: 3.5,
-        componentSpacing: 100,
-        nodeOverlap: 14,
+          Math.max(
+            24,
+            (80 - Number(edge.data("weight")) * 8) * forceProfile.distanceScale,
+          ),
+        gravity: 0.04 * forceProfile.attractionScale,
+        gravityRange: 3.5 * forceProfile.attractionScale,
+        componentSpacing: Math.max(35, 100 * forceProfile.distanceScale),
+        nodeOverlap: Math.max(6, 14 * forceProfile.distanceScale),
         numIter: 1600,
       } as cytoscape.LayoutOptions,
       wheelSensitivity: 0.18,
@@ -366,7 +397,7 @@ export class GraphWindowController {
     this.cy.on("mouseout", "node", (event) =>
       event.target.removeClass("match"),
     );
-    await this.startPhysics();
+    await this.startPhysics(forceProfile);
     const ResizeObserverClass = this.window?.ResizeObserver;
     if (ResizeObserverClass) {
       const resizeObserver = new ResizeObserverClass(() =>
@@ -378,7 +409,27 @@ export class GraphWindowController {
     this.applySearch((doc.getElementById("search") as HTMLInputElement).value);
   }
 
-  private async startPhysics(): Promise<void> {
+  private getForceBalanceProfile(): ForceBalanceProfile {
+    const rawValue = Number(
+      (this.window?.document.getElementById("distance") as HTMLInputElement)
+        ?.value,
+    );
+    const value = Math.max(
+      0,
+      Math.min(200, Number.isFinite(rawValue) ? rawValue : 100),
+    );
+    const compactness = (value - 100) / 100;
+    return {
+      value,
+      label: `${value} · ${value < 85 ? "松散" : value > 115 ? "紧密" : "均衡"}`,
+      distanceScale: 1 - compactness * 0.35,
+      repulsionScale: 1 - compactness * 0.65,
+      attractionScale: 1 + compactness * 0.7,
+      linkStrength: Math.max(0.3, Math.min(1, 0.7 + compactness * 0.4)),
+    };
+  }
+
+  private async startPhysics(forceProfile: ForceBalanceProfile): Promise<void> {
     const cy = this.cy;
     if (!cy) return;
     const d3 = await getD3Force();
@@ -424,12 +475,18 @@ export class GraphWindowController {
     const columns = Math.ceil(Math.sqrt(componentCount));
     const rows = Math.ceil(componentCount / columns);
     const componentGapX = Math.min(
-      180,
-      Math.max(120, (cy.width() - 180) / Math.max(1, columns - 1)),
+      180 * forceProfile.distanceScale,
+      Math.max(
+        120 * forceProfile.distanceScale,
+        (cy.width() - 180) / Math.max(1, columns - 1),
+      ),
     );
     const componentGapY = Math.min(
-      155,
-      Math.max(105, (cy.height() - 160) / Math.max(1, rows - 1)),
+      155 * forceProfile.distanceScale,
+      Math.max(
+        105 * forceProfile.distanceScale,
+        (cy.height() - 160) / Math.max(1, rows - 1),
+      ),
     );
     const componentTargets = Array.from(
       { length: componentCount },
@@ -449,13 +506,20 @@ export class GraphWindowController {
         d3
           .forceLink<PhysicsNode, PhysicsLink>(physicsLinks)
           .id((node) => node.id)
-          .distance((link) => Math.max(44, 72 - link.weight * 6.5))
-          .strength(0.7),
+          .distance((link) =>
+            Math.max(24, (72 - link.weight * 6.5) * forceProfile.distanceScale),
+          )
+          .strength(forceProfile.linkStrength),
       )
-      .force("charge", d3.forceManyBody().strength(-300))
+      .force(
+        "charge",
+        d3.forceManyBody().strength(-300 * forceProfile.repulsionScale),
+      )
       .force(
         "collide",
-        d3.forceCollide<PhysicsNode>().radius((node) => node.radius + 6),
+        d3
+          .forceCollide<PhysicsNode>()
+          .radius((node) => node.radius + 6 * forceProfile.distanceScale),
       )
       .force(
         "component-x",
@@ -463,7 +527,7 @@ export class GraphWindowController {
           .forceX<PhysicsNode>(
             (node) => componentTargets[componentByNode.get(node.id) ?? 0].x,
           )
-          .strength(0.038),
+          .strength(0.038 * forceProfile.attractionScale),
       )
       .force(
         "component-y",
@@ -471,7 +535,7 @@ export class GraphWindowController {
           .forceY<PhysicsNode>(
             (node) => componentTargets[componentByNode.get(node.id) ?? 0].y,
           )
-          .strength(0.038),
+          .strength(0.038 * forceProfile.attractionScale),
       )
       .velocityDecay(0.46)
       .alphaDecay(0.035)

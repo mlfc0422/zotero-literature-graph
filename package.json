@@ -1,7 +1,7 @@
 {
   "name": "zotero-puls",
   "type": "module",
-  "version": "0.5.6",
+  "version": "0.5.8",
   "description": "Visualize author-tag relationships in Zotero collections",
   "config": {
     "addonName": "Zotero Puls",
