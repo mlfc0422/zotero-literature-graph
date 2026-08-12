@@ -84,6 +84,102 @@ var ZoteroPulsPreferences = {
     ["zju", "浙江大学分类"],
     ["cpu", "中国药科大学分类"],
   ],
+  easyScholarGroups: [
+    {
+      title: "\u5e38\u7528\u5206\u533a",
+      description:
+        "SCI\u3001SSCI \u4e0e\u4e2d\u79d1\u9662\u7b49\u5e38\u7528\u671f\u520a\u5206\u533a\u4fe1\u606f",
+      fields: ["sci", "ssci", "sciBase", "sciUp", "sciUpTop", "sciUpSmall"],
+    },
+    {
+      title: "\u6307\u6807\u4e0e\u9884\u8b66",
+      description:
+        "JCR \u5f71\u54cd\u56e0\u5b50\u3001JCI\u3001ESI \u53ca\u671f\u520a\u9884\u8b66\u4fe1\u606f",
+      fields: [
+        "sciif",
+        "sciif5",
+        "jci",
+        "esi",
+        "sciwarn",
+        "xr",
+        "xrTop",
+        "xrSmall",
+        "xrWarn",
+      ],
+    },
+    {
+      title: "\u56fd\u5185\u6838\u5fc3\u4e0e\u6536\u5f55",
+      description:
+        "\u56fd\u5185\u6838\u5fc3\u671f\u520a\u4e0e\u4e3b\u8981\u6570\u636e\u5e93\u6536\u5f55\u60c5\u51b5",
+      fields: ["eii", "cscd", "pku", "cssci", "zhongguokejihexin", "ahci"],
+    },
+    {
+      title: "\u56fd\u9645\u5b66\u672f\u6392\u540d",
+      description:
+        "\u8ba1\u7b97\u673a\u3001\u5546\u5b66\u4e0e\u7ba1\u7406\u5b66\u79d1\u5e38\u7528\u7684\u671f\u520a\u8bc4\u4ef7\u5217\u8868",
+      fields: ["ccf", "ajg", "utd24", "ft50", "fms"],
+    },
+    {
+      title: "\u9ad8\u6821\u4e0e\u673a\u6784\u699c\u5355",
+      description:
+        "\u5404\u9ad8\u6821\u6216\u673a\u6784\u81ea\u5b9a\u4e49\u7684\u671f\u520a\u6392\u540d\u4e0e\u5206\u7ea7",
+      fields: [
+        "swufe",
+        "cufe",
+        "uibe",
+        "sdufe",
+        "xdu",
+        "swjtu",
+        "ruc",
+        "xmu",
+        "sjtu",
+        "fdu",
+        "hhu",
+        "scu",
+        "cqu",
+        "nju",
+        "xju",
+        "cug",
+        "cju",
+        "zju",
+        "cpu",
+      ],
+    },
+    {
+      title: "\u81ea\u5b9a\u4e49\u6570\u636e\u96c6",
+      description:
+        "EasyScholar \u8d26\u6237\u4e2d\u914d\u7f6e\u7684\u81ea\u5b9a\u4e49\u671f\u520a\u7b49\u7ea7",
+      fields: ["customRank"],
+    },
+  ],
+  easyScholarDescriptions: {
+    customRank:
+      "EasyScholar \u8d26\u6237\u4e2d\u81ea\u5b9a\u4e49\u6570\u636e\u96c6\u7684\u671f\u520a\u7b49\u7ea7",
+    sci: "JCR \u7684 SCI \u671f\u520a\u5206\u533a",
+    ssci: "JCR \u7684 SSCI \u671f\u520a\u5206\u533a",
+    sciBase: "\u4e2d\u79d1\u9662 SCI \u57fa\u7840\u7248\u5206\u533a",
+    sciUp: "\u4e2d\u79d1\u9662 SCI \u5347\u7ea7\u7248\u5206\u533a",
+    sciUpTop: "\u4e2d\u79d1\u9662\u5347\u7ea7\u7248 Top \u5206\u533a",
+    sciUpSmall: "\u4e2d\u79d1\u9662\u5347\u7ea7\u7248\u5c0f\u7c7b\u5206\u533a",
+    sciif: "JCR \u5f71\u54cd\u56e0\u5b50",
+    sciif5: "JCR \u4e94\u5e74\u5f71\u54cd\u56e0\u5b50",
+    sciwarn: "\u4e2d\u79d1\u9662\u671f\u520a\u9884\u8b66\u4fe1\u606f",
+    jci: "JCR \u671f\u520a\u5f15\u6587\u6307\u6807",
+    esi: "ESI \u5b66\u79d1\u5206\u7c7b",
+    eii: "EI \u5de5\u7a0b\u7d22\u5f15\u6536\u5f55",
+    cscd: "\u4e2d\u56fd\u79d1\u5b66\u5f15\u6587\u6570\u636e\u5e93",
+    pku: "\u5317\u5927\u6838\u5fc3\u671f\u520a",
+    cssci:
+      "CSSCI\uff0c\u5357\u4eac\u5927\u5b66\u4e2d\u6587\u793e\u4f1a\u79d1\u5b66\u5f15\u6587\u7d22\u5f15",
+    zhongguokejihexin: "\u4e2d\u56fd\u79d1\u6280\u6838\u5fc3\u671f\u520a",
+    ahci: "Arts & Humanities Citation Index \u6536\u5f55",
+    ccf: "\u4e2d\u56fd\u8ba1\u7b97\u673a\u5b66\u4f1a\u63a8\u8350\u5206\u7ea7",
+    ajg: "ABS Academic Journal Guide",
+    utd24:
+      "UT Dallas Top 100 Business School Research Rankings \u671f\u520a\u5217\u8868",
+    ft50: "Financial Times 50 \u671f\u520a\u5217\u8868",
+    fms: "FMS \u7ba1\u7406\u79d1\u5b66\u9ad8\u8d28\u91cf\u671f\u520a\u5206\u7c7b",
+  },
   prompt: `Generate concise academic topic tags for the paper below.
 
 The tags will be used to connect related papers in a knowledge graph. Tags should capture the paper's main research areas, research problems, and reusable methodological directions.
@@ -112,6 +208,9 @@ Output JSON only, with no explanation or additional text:
   },
   getEasyScholar(id) {
     return document.getElementById(`zotero-puls-es-${id}`);
+  },
+  createHtml(tagName) {
+    return document.createElementNS("http://www.w3.org/1999/xhtml", tagName);
   },
   init() {
     const root = document.getElementById("zotero-puls-preferences");
@@ -217,20 +316,94 @@ Output JSON only, with no explanation or additional text:
     }
     if (!selected.length)
       selected = this.easyScholarFields.map(([field]) => field);
+    let tooltip = null;
+    try {
+      tooltip = this.getEasyScholarTooltip();
+    } catch {
+      // Tooltip failure must never prevent the field controls from rendering.
+    }
+    const labels = new Map(this.easyScholarFields);
+    const groupedFields = new Set(
+      this.easyScholarGroups.flatMap((group) => group.fields),
+    );
+    const groups = [...this.easyScholarGroups];
+    const uncategorized = [...labels.keys()].filter(
+      (field) => !groupedFields.has(field),
+    );
+    if (uncategorized.length)
+      groups.push({
+        title: "\u5176\u4ed6",
+        description:
+          "\u5176\u4ed6\u53ef\u7528\u7684\u671f\u520a\u4fe1\u606f\u5b57\u6bb5",
+        fields: uncategorized,
+      });
+
     host.replaceChildren();
-    Array.from(
-      new Map(this.easyScholarFields.map(([field, label]) => [field, label])),
-    ).forEach(([field, label]) => {
-      const row = document.createElement("label");
-      row.style.display = "inline-block";
-      row.style.marginRight = "12px";
-      const input = document.createElement("input");
-      input.type = "checkbox";
-      input.value = field;
-      input.checked = selected.includes(field);
-      input.addEventListener("change", () => this.persistEasyScholarFields());
-      row.append(input, ` ${label}`);
-      host.appendChild(row);
+    groups.forEach((group) => {
+      const section = this.createHtml("section");
+      section.className = "puls-rank-group";
+      const heading = this.createHtml("div");
+      heading.className = "puls-rank-heading";
+      heading.textContent = group.title;
+      const hint = this.createHtml("span");
+      hint.className = "puls-rank-hint";
+      hint.textContent = "\u24d8 \u8bf4\u660e";
+      heading.append(" ", hint);
+      this.bindEasyScholarTooltip(heading, group.description, tooltip);
+      const fields = this.createHtml("div");
+      fields.className = "puls-rank-fields";
+      group.fields.forEach((field) => {
+        const label = labels.get(field);
+        if (!label) return;
+        const row = this.createHtml("label");
+        row.className = "puls-rank-field";
+        const description =
+          this.easyScholarDescriptions[field] ||
+          `${label}\uff1a\u7531 EasyScholar \u8fd4\u56de\u7684\u671f\u520a\u5206\u7ea7\u6216\u6392\u540d\u4fe1\u606f`;
+        this.bindEasyScholarTooltip(row, description, tooltip);
+        const input = this.createHtml("input");
+        input.type = "checkbox";
+        input.value = field;
+        input.checked = selected.includes(field);
+        input.addEventListener("change", () => this.persistEasyScholarFields());
+        const name = this.createHtml("span");
+        name.textContent = label;
+        row.append(input, " ", name);
+        fields.appendChild(row);
+      });
+      section.append(heading, fields);
+      host.appendChild(section);
+    });
+  },
+  getEasyScholarTooltip() {
+    let tooltip = document.getElementById("zotero-puls-es-tooltip");
+    if (tooltip) return tooltip;
+    tooltip = this.createHtml("div");
+    tooltip.id = "zotero-puls-es-tooltip";
+    tooltip.className = "puls-rank-tooltip";
+    tooltip.setAttribute("role", "tooltip");
+    tooltip.hidden = true;
+    const root = document.getElementById("zotero-puls-preferences");
+    if (!root) throw new Error("Zotero Puls preferences root is unavailable");
+    root.appendChild(tooltip);
+    return tooltip;
+  },
+  bindEasyScholarTooltip(target, description, tooltip) {
+    if (!tooltip) return;
+    const show = (event) => {
+      tooltip.textContent = description;
+      tooltip.hidden = false;
+      tooltip.style.left = `${event.clientX + 12}px`;
+      tooltip.style.top = `${event.clientY + 14}px`;
+    };
+    const move = (event) => {
+      tooltip.style.left = `${event.clientX + 12}px`;
+      tooltip.style.top = `${event.clientY + 14}px`;
+    };
+    target.addEventListener("mouseenter", show);
+    target.addEventListener("mousemove", move);
+    target.addEventListener("mouseleave", () => {
+      tooltip.hidden = true;
     });
   },
   persistEasyScholarFields() {

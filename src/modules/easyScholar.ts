@@ -1,87 +1,25 @@
+import { requestPublicationRank } from "../features/easyScholar/client";
+import {
+  EASY_SCHOLAR_FIELDS,
+  formatEasyScholarLines,
+  mergeEasyScholarBlock,
+  type EasyScholarFieldKey,
+} from "../features/easyScholar/core";
+import { zoteroPreferenceStore } from "../platform/zoteroServices";
+
 const PREF_PREFIX = "extensions.zotero.zoteropuls.easyscholar.";
-const BLOCK_START = "[EasyScholar]";
-const BLOCK_END = "[/EasyScholar]";
-let nextEasyScholarRequestAt = 0;
 
-export const EASY_SCHOLAR_FIELDS = [
-  ["customRank", "自定义数据集等级"],
-  ["sci", "JCR 分区"],
-  ["ssci", "SSCI 分区"],
-  ["sciBase", "中科院基础版分区"],
-  ["sciUp", "中科院升级版分区"],
-  ["sciUpTop", "中科院升级版 Top 分区"],
-  ["sciUpSmall", "中科院升级版小类分区"],
-  ["sciif", "影响因子"],
-  ["sciif5", "5 年影响因子"],
-  ["sciwarn", "中科院预警"],
-  ["eii", "EI"],
-  ["cscd", "CSCD"],
-  ["pku", "北大核心"],
-  ["cssci", "南大核心"],
-  ["zhongguokejihexin", "科技核心"],
-  ["ccf", "CCF"],
-  ["ajg", "AJG"],
-  ["utd24", "UTD24"],
-  ["ft50", "FT50"],
-  ["fms", "FMS"],
-  ["jci", "JCI"],
-  ["ahci", "AHCI"],
-  ["esi", "ESI"],
-  ["xr", "人大复印资料"],
-  ["xrTop", "人大复印资料 Top"],
-  ["xrSmall", "人大复印资料小类"],
-  ["xrWarn", "人大复印资料预警"],
-  ["swufe", "西南财经大学分类"],
-  ["cufe", "中央财经大学分类"],
-  ["uibe", "对外经贸大学分类"],
-  ["sdufe", "山东财经大学分类"],
-  ["xdu", "西安电子科技大学分类"],
-  ["swjtu", "西南交通大学分类"],
-  ["ruc", "中国人民大学分类"],
-  ["xmu", "厦门大学分类"],
-  ["sjtu", "上海交通大学分类"],
-  ["fdu", "复旦大学分类"],
-  ["hhu", "河海大学分类"],
-  ["scu", "四川大学分类"],
-  ["cqu", "重庆大学分类"],
-  ["nju", "南京大学分类"],
-  ["xju", "新疆大学分类"],
-  ["cug", "中国地质大学分类"],
-  ["cju", "长江大学分类"],
-  ["zju", "浙江大学分类"],
-  ["cpu", "中国药科大学分类"],
-] as const;
-
-type EasyScholarFieldKey = (typeof EASY_SCHOLAR_FIELDS)[number][0];
-type EasyScholarResponse = {
-  code?: number;
-  data?: {
-    officialRank?: { all?: Record<string, unknown> };
-    customRank?: {
-      rankInfo?: Array<{
-        uuid?: string;
-        abbName?: string;
-        oneRankText?: string;
-        twoRankText?: string;
-        threeRankText?: string;
-        fourRankText?: string;
-        fiveRankText?: string;
-      }>;
-      rank?: string[];
-    };
-  };
-  msg?: string;
-};
+export { EASY_SCHOLAR_FIELDS };
 
 function getPref(key: string, fallback = ""): string {
-  return String(Zotero.Prefs.get(`${PREF_PREFIX}${key}`, true) ?? fallback);
+  return String(zoteroPreferenceStore.get(`${PREF_PREFIX}${key}`, fallback));
 }
 
 export function getEasyScholarSelectedFields(): EasyScholarFieldKey[] {
   const defaults = EASY_SCHOLAR_FIELDS.map(([key]) => key);
   try {
     const keys = JSON.parse(getPref("fields", "[]")) as string[];
-    const valid = new Set(EASY_SCHOLAR_FIELDS.map(([key]) => key));
+    const valid = new Set<EasyScholarFieldKey>(defaults);
     const selected = keys.filter((key): key is EasyScholarFieldKey =>
       valid.has(key as EasyScholarFieldKey),
     );
@@ -99,46 +37,6 @@ function getVenue(item: Zotero.Item): string {
   ).trim();
 }
 
-async function respectEasyScholarRateLimit(): Promise<void> {
-  const scheduledAt = Math.max(Date.now(), nextEasyScholarRequestAt);
-  nextEasyScholarRequestAt = scheduledAt + 500;
-  const delay = scheduledAt - Date.now();
-  if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
-}
-
-function formatCustomRanks(response: EasyScholarResponse): string[] {
-  const custom = response.data?.customRank;
-  if (!custom?.rank?.length || !custom.rankInfo?.length) return [];
-  const dataSetByID = new Map(
-    custom.rankInfo
-      .filter(
-        (
-          entry,
-        ): entry is Required<Pick<(typeof custom.rankInfo)[number], "uuid">> &
-          typeof entry => Boolean(entry.uuid),
-      )
-      .map((entry) => [entry.uuid, entry]),
-  );
-  return custom.rank.flatMap((encoded) => {
-    const [uuid, levelText] = encoded.split("&&&");
-    const dataSet = dataSetByID.get(uuid);
-    const level = Number(levelText);
-    const rank =
-      dataSet?.[
-        [
-          "oneRankText",
-          "twoRankText",
-          "threeRankText",
-          "fourRankText",
-          "fiveRankText",
-        ][level - 1] as keyof typeof dataSet
-      ];
-    return dataSet?.abbName && typeof rank === "string" && rank
-      ? [`${dataSet.abbName} ${rank}`]
-      : [];
-  });
-}
-
 export async function updateEasyScholarItem(
   item: Zotero.Item,
 ): Promise<boolean> {
@@ -151,38 +49,13 @@ export async function updateEasyScholarItem(
   const selected = getEasyScholarSelectedFields();
   if (!selected.length) throw new Error("请至少选择一个 EasyScholar 信息字段");
 
-  await respectEasyScholarRateLimit();
-  const url = `https://www.easyscholar.cc/open/getPublicationRank?secretKey=${encodeURIComponent(secretKey)}&publicationName=${encodeURIComponent(venue)}`;
-  const response = await Zotero.HTTP.request("GET", url, {
-    responseType: "json",
-    timeout: 30000,
-  });
-  const body = response.response as EasyScholarResponse;
-  if (body.code !== 200 || !body.data)
-    throw new Error(body.msg || "EasyScholar 未返回该期刊或会议的信息");
-  const rank = body.data.officialRank?.all ?? {};
-
-  const lines = EASY_SCHOLAR_FIELDS.filter(
-    ([key]) => key !== "customRank" && selected.includes(key),
-  )
-    .map(([key, label]) => {
-      const value = rank[key];
-      return value === undefined || value === null || value === ""
-        ? undefined
-        : `${label}: ${Array.isArray(value) ? value.join("；") : String(value)}`;
-    })
-    .filter((line): line is string => Boolean(line));
-  if (selected.includes("customRank")) {
-    const customRanks = formatCustomRanks(body);
-    if (customRanks.length)
-      lines.push(`自定义数据集: ${customRanks.join("；")}`);
-  }
+  const response = await requestPublicationRank(secretKey, venue);
+  if (response.code !== 200 || !response.data)
+    throw new Error(response.msg || "EasyScholar 未返回该期刊或会议的信息");
+  const lines = formatEasyScholarLines(response, selected);
   if (!lines.length) return false;
-  const block = `${BLOCK_START}\n${lines.join("\n")}\n${BLOCK_END}`;
-  const extra = String(item.getField("extra") || "").trim();
-  const blockPattern = /\n?\[EasyScholar\][\s\S]*?\[\/EasyScholar\]\n?/g;
-  const preserved = extra.replace(blockPattern, "").trim();
-  item.setField("extra", preserved ? `${preserved}\n\n${block}` : block);
+  const extra = String(item.getField("extra") || "");
+  item.setField("extra", mergeEasyScholarBlock(extra, lines));
   await item.saveTx();
   return true;
 }

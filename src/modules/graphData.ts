@@ -1,3 +1,5 @@
+import { getMainWindow } from "../platform/zoteroWindows";
+
 export type GraphNodeType = "author" | "tag";
 
 export interface PaperRecord {
@@ -152,7 +154,7 @@ function creatorName(creator: _ZoteroTypes.Item.CreatorJSON): string {
 }
 
 export function buildCurrentCollectionGraph(
-  win: _ZoteroTypes.MainWindow = Zotero.getMainWindow(),
+  win: _ZoteroTypes.MainWindow = getMainWindow(),
 ): GraphData {
   const pane = (win as unknown as { ZoteroPane: _ZoteroTypes.ZoteroPane })
     .ZoteroPane;

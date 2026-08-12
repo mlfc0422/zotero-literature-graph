@@ -1,7 +1,7 @@
 {
   "name": "zotero-puls",
   "type": "module",
-  "version": "0.7.5",
+  "version": "0.8.3",
   "description": "Visualize author-tag relationships in Zotero collections",
   "config": {
     "addonName": "Zotero Puls",
@@ -24,7 +24,7 @@
     "lint:fix": "prettier --write . && eslint . --fix",
     "release": "zotero-plugin release",
     "test": "zotero-plugin test",
-    "test:unit": "node --import tsx node_modules/mocha/bin/mocha.js test/graphData.test.ts",
+    "test:unit": "node --import tsx node_modules/mocha/bin/mocha.js test/graphData.test.ts test/coreModules.test.ts",
     "update-deps": "npm update --save"
   },
   "dependencies": {

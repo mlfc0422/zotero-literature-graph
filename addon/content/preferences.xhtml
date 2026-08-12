@@ -3,6 +3,37 @@
   xmlns:html="http://www.w3.org/1999/xhtml"
   id="zotero-puls-preferences"
 >
+  <html:style>
+    <![CDATA[ #zotero-puls-preferences { padding: 8px 10px 14px; }
+    #zotero-puls-preferences groupbox { margin: 0 0 12px; } .puls-form-grid {
+    display: grid; grid-template-columns: minmax(92px, 116px) minmax(260px,
+    1fr); gap: 10px 14px; align-items: center; max-width: 720px; } .puls-field {
+    display: contents; } .puls-field-label { color: #4b5563; font-weight: 600;
+    text-align: right; } .puls-form-grid input[type="password"], .puls-form-grid
+    select { box-sizing: border-box; min-width: 0; width: 100%; }
+    .puls-model-control { display: flex; align-items: center; gap: 8px;
+    min-width: 0; } .puls-model-control select { flex: 1; } .puls-checkbox-field
+    { grid-column: 2; } .puls-package-description { grid-column: 2; color:
+    #667085; font-size: 0.92em; } .puls-fields-caption { margin: 14px 0 7px; }
+    #zotero-puls-es-fields { display: grid; grid-template-columns:
+    repeat(auto-fit, minmax(215px, 1fr)); gap: 10px; max-width: 720px; padding:
+    10px 12px; border: 1px solid color-mix(in srgb, currentColor 16%,
+    transparent); border-radius: 6px; background: color-mix(in srgb,
+    currentColor 3%, transparent); } .puls-rank-group { padding: 8px 9px 9px;
+    border: 1px solid color-mix(in srgb, currentColor 11%, transparent);
+    border-radius: 5px; background: color-mix(in srgb, currentColor 2%,
+    transparent); } .puls-rank-heading { margin-bottom: 7px; color: #4b5563;
+    font-size: 0.9em; font-weight: 700; } .puls-rank-hint { cursor: help; color:
+    #7a8798; font-size: 0.95em; font-weight: 400; } .puls-rank-fields { display:
+    grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 6px
+    8px; } .puls-rank-field { margin: 0 !important; cursor: help; white-space:
+    nowrap; } .puls-rank-tooltip { position: fixed; z-index: 2147483647;
+    max-width: 300px; padding: 7px 9px; border-radius: 5px; background: #27303f;
+    color: #fff; font-size: 12px; line-height: 1.45; box-shadow: 0 4px 14px
+    rgba(0, 0, 0, 0.22); pointer-events: none; } #zotero-puls-ai-prompt {
+    box-sizing: border-box; width: min(720px, 100%); min-height: 140px; resize:
+    vertical; } ]]>
+  </html:style>
   <groupbox>
     <label><html:h2>Zotero Puls</html:h2></label>
     <description
@@ -23,15 +54,17 @@
       &#30340;&#24320;&#25918;&#25509;&#21475;&#12290;&#26597;&#35810;&#32467;&#26524;&#20250;&#20445;&#23384;&#22312;&#25991;&#29486;&#8220;&#20854;&#20182;&#8221;&#23383;&#27573;&#30340;
       EasyScholar &#21306;&#22359;&#20013;&#12290;</description
     >
-    <html:label
-      >Secret Key
-      <html:input id="zotero-puls-es-secret-key" type="password" size="42" />
-    </html:label>
-    <html:label>
-      <html:input id="zotero-puls-es-auto-update" type="checkbox" />
-      &#26032;&#22686;&#25991;&#29486;&#26102;&#33258;&#21160;&#26597;&#35810;
-    </html:label>
-    <description
+    <html:div class="puls-form-grid">
+      <html:label class="puls-field">
+        <html:span class="puls-field-label">Secret Key</html:span>
+        <html:input id="zotero-puls-es-secret-key" type="password" />
+      </html:label>
+      <html:label class="puls-checkbox-field">
+        <html:input id="zotero-puls-es-auto-update" type="checkbox" />
+        &#26032;&#22686;&#25991;&#29486;&#26102;&#33258;&#21160;&#26597;&#35810;
+      </html:label>
+    </html:div>
+    <description class="puls-fields-caption"
       >&#35201;&#20889;&#20837;&#30340;&#23383;&#27573;&#65288;&#21487;&#22810;&#36873;&#65289;</description
     >
     <html:div id="zotero-puls-es-fields" />
@@ -40,39 +73,52 @@
     <label
       ><html:strong>AI &#26631;&#31614;&#26381;&#21153;</html:strong></label
     >
-    <html:label
-      >&#26381;&#21153;&#22871;&#39184;
-      <html:select id="zotero-puls-ai-provider">
-        <html:option value="deepseek">DeepSeek</html:option>
-        <html:option value="openai">OpenAI</html:option>
-      </html:select>
-    </html:label>
-    <description id="zotero-puls-ai-package-description" />
-    <html:label
-      >API Key
-      <html:input id="zotero-puls-ai-api-key" type="password" size="42" />
-    </html:label>
-    <html:div id="zotero-puls-ai-model-row">
-      <html:label for="zotero-puls-ai-model">&#27169;&#22411;</html:label>
-      <html:select id="zotero-puls-ai-model" disabled="true"
-        ><html:option value=""
-          >&#22635;&#20889; API Key
-          &#21518;&#33719;&#21462;&#27169;&#22411;</html:option
-        ></html:select
-      >
-      <html:button id="zotero-puls-ai-fetch-models" type="button"
-        >&#33719;&#21462;&#21487;&#29992;&#27169;&#22411;</html:button
-      >
-    </html:div>
-    <html:label
-      >&#40664;&#35748;&#26631;&#31614;&#25968;
-      <html:input
-        id="zotero-puls-ai-tag-count"
-        type="number"
-        min="1"
-        max="20"
+    <html:div class="puls-form-grid">
+      <html:label class="puls-field">
+        <html:span class="puls-field-label"
+          >&#26381;&#21153;&#22871;&#39184;</html:span
+        >
+        <html:select id="zotero-puls-ai-provider">
+          <html:option value="deepseek">DeepSeek</html:option>
+          <html:option value="openai">OpenAI</html:option>
+        </html:select>
+      </html:label>
+      <html:span
+        id="zotero-puls-ai-package-description"
+        class="puls-package-description"
       />
-    </html:label>
+      <html:label class="puls-field">
+        <html:span class="puls-field-label">API Key</html:span>
+        <html:input id="zotero-puls-ai-api-key" type="password" />
+      </html:label>
+      <html:div class="puls-field">
+        <html:label class="puls-field-label" for="zotero-puls-ai-model"
+          >&#27169;&#22411;</html:label
+        >
+        <html:div id="zotero-puls-ai-model-row" class="puls-model-control">
+          <html:select id="zotero-puls-ai-model" disabled="true"
+            ><html:option value=""
+              >&#22635;&#20889; API Key
+              &#21518;&#33719;&#21462;&#27169;&#22411;</html:option
+            ></html:select
+          >
+          <html:button id="zotero-puls-ai-fetch-models" type="button"
+            >&#33719;&#21462;&#21487;&#29992;&#27169;&#22411;</html:button
+          >
+        </html:div>
+      </html:div>
+      <html:label class="puls-field">
+        <html:span class="puls-field-label"
+          >&#40664;&#35748;&#26631;&#31614;&#25968;</html:span
+        >
+        <html:input
+          id="zotero-puls-ai-tag-count"
+          type="number"
+          min="1"
+          max="20"
+        />
+      </html:label>
+    </html:div>
   </groupbox>
   <groupbox>
     <label><html:strong>&#25552;&#31034;&#35789;</html:strong></label>
