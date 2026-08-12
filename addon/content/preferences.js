@@ -13,6 +13,76 @@ var ZoteroPulsPreferences = {
     },
   },
   deepseekModels: ["deepseek-v4-flash", "deepseek-v4-pro"],
+  easyScholarFields: [
+    ["sci", "JCR 分区"],
+    ["ssci", "SSCI 分区"],
+    ["sciBase", "中科院基础版分区"],
+    ["sciUp", "中科院升级版分区"],
+    ["sciUpTop", "中科院升级版 Top 分区"],
+    ["sciUpSmall", "中科院升级版小类分区"],
+    ["sciif", "影响因子"],
+    ["sciif5", "5 年影响因子"],
+    ["sciwarn", "中科院预警"],
+    ["eii", "EI"],
+    ["cscd", "CSCD"],
+    ["pku", "北大核心"],
+    ["cssci", "南大核心"],
+    ["zhongguokejihexin", "科技核心"],
+    ["ccf", "CCF"],
+    ["ajg", "AJG"],
+    ["utd24", "UTD24"],
+    ["ft50", "FT50"],
+    ["fms", "FMS"],
+    ["jci", "JCI"],
+    ["ahci", "AHCI"],
+    ["esi", "ESI"],
+    ["xr", "人大复印资料"],
+    ["xrTop", "人大复印资料 Top"],
+    ["xrSmall", "人大复印资料小类"],
+    ["xrWarn", "人大复印资料预警"],
+    ["swufe", "西南财经大学分类"],
+    ["cufe", "中央财经大学分类"],
+    ["uibe", "对外经贸大学分类"],
+    ["sdufe", "山东财经大学分类"],
+    ["xdu", "西安电子科技大学分类"],
+    ["swjtu", "西南交通大学分类"],
+    ["ruc", "中国人民大学分类"],
+    ["xmu", "厦门大学分类"],
+    ["sjtu", "上海交通大学分类"],
+    ["fdu", "复旦大学分类"],
+    ["hhu", "河海大学分类"],
+    ["scu", "四川大学分类"],
+    ["cqu", "重庆大学分类"],
+    ["nju", "南京大学分类"],
+    ["xju", "新疆大学分类"],
+    ["cug", "中国地质大学分类"],
+    ["cju", "长江大学分类"],
+    ["zju", "浙江大学分类"],
+    ["cpu", "中国药科大学分类"],
+    ["xr", "人大复印资料"],
+    ["xrTop", "人大复印资料 Top"],
+    ["xrSmall", "人大复印资料小类"],
+    ["xrWarn", "人大复印资料预警"],
+    ["swufe", "西南财经大学分类"],
+    ["cufe", "中央财经大学分类"],
+    ["uibe", "对外经贸大学分类"],
+    ["sdufe", "山东财经大学分类"],
+    ["xdu", "西安电子科技大学分类"],
+    ["swjtu", "西南交通大学分类"],
+    ["ruc", "中国人民大学分类"],
+    ["xmu", "厦门大学分类"],
+    ["sjtu", "上海交通大学分类"],
+    ["fdu", "复旦大学分类"],
+    ["hhu", "河海大学分类"],
+    ["scu", "四川大学分类"],
+    ["cqu", "重庆大学分类"],
+    ["nju", "南京大学分类"],
+    ["xju", "新疆大学分类"],
+    ["cug", "中国地质大学分类"],
+    ["cju", "长江大学分类"],
+    ["zju", "浙江大学分类"],
+    ["cpu", "中国药科大学分类"],
+  ],
   prompt: `Generate concise academic topic tags for the paper below.
 
 The tags will be used to connect related papers in a knowledge graph. Tags should capture the paper's main research areas, research problems, and reusable methodological directions.
@@ -84,7 +154,73 @@ Output JSON only, with no explanation or additional text:
     this.get("fetch-models").addEventListener("click", () =>
       this.fetchOpenAIModels(),
     );
+    this.initEasyScholar();
     this.updatePackage();
+  },
+  initEasyScholar() {
+    const key = this.get("es-secret-key");
+    const auto = this.get("es-auto-update");
+    key.value =
+      Zotero.Prefs.get(
+        "extensions.zotero.zoteropuls.easyscholar.secretKey",
+        true,
+      ) || "";
+    auto.checked =
+      Zotero.Prefs.get(
+        "extensions.zotero.zoteropuls.easyscholar.autoUpdate",
+        true,
+      ) !== false;
+    key.addEventListener("input", () =>
+      Zotero.Prefs.set(
+        "extensions.zotero.zoteropuls.easyscholar.secretKey",
+        key.value.trim(),
+        true,
+      ),
+    );
+    auto.addEventListener("change", () =>
+      Zotero.Prefs.set(
+        "extensions.zotero.zoteropuls.easyscholar.autoUpdate",
+        auto.checked,
+        true,
+      ),
+    );
+    let selected;
+    try {
+      selected = JSON.parse(
+        Zotero.Prefs.get(
+          "extensions.zotero.zoteropuls.easyscholar.fields",
+          true,
+        ) || "[]",
+      );
+    } catch {
+      selected = [];
+    }
+    if (!selected.length)
+      selected = this.easyScholarFields.map(([field]) => field);
+    const host = this.get("es-fields");
+    host.replaceChildren();
+    this.easyScholarFields.forEach(([field, label]) => {
+      const row = document.createElement("label");
+      row.style.display = "inline-block";
+      row.style.marginRight = "12px";
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.value = field;
+      input.checked = selected.includes(field);
+      input.addEventListener("change", () => this.persistEasyScholarFields());
+      row.append(input, ` ${label}`);
+      host.appendChild(row);
+    });
+  },
+  persistEasyScholarFields() {
+    const fields = [
+      ...this.get("es-fields").querySelectorAll("input:checked"),
+    ].map((input) => input.value);
+    Zotero.Prefs.set(
+      "extensions.zotero.zoteropuls.easyscholar.fields",
+      JSON.stringify(fields),
+      true,
+    );
   },
   persistApiKey(provider) {
     const root = document.getElementById("zotero-puls-preferences");

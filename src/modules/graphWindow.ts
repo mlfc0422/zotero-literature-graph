@@ -54,7 +54,7 @@ const STYLES = `
   :root { color-scheme: light dark; font: 14px system-ui, sans-serif; }
   * { box-sizing: border-box; }
   body { margin: 0; overflow: hidden; background: #f7f8fa; color: #202124; }
-  #app { height: 680px; display: grid; grid-template-rows: auto 1fr; }
+  #app { height: 100%; min-height: 0; display: grid; grid-template-rows: auto 1fr; }
   header { display: flex; align-items: center; gap: 16px; padding: 10px 16px; background: rgba(255,255,255,.94); border-bottom: 1px solid #dfe1e5; }
   h1 { margin: 0 auto 0 0; font-size: 17px; white-space: nowrap; }
   label { display: flex; gap: 8px; align-items: center; white-space: nowrap; color: #5d6875; font-size: 12px; font-weight: 600; }
@@ -148,7 +148,7 @@ export class GraphWindowController {
           tag: "div",
           namespace: "html",
           id: "zotero-puls-graph-root",
-          styles: { width: "1120px", height: "680px" },
+          styles: { width: "1200px", height: "800px" },
         },
         false,
       )
@@ -196,10 +196,46 @@ export class GraphWindowController {
         text: STYLES,
       });
     }
+    const resizeShell = () => {
+      const win = this.window;
+      if (!win) return;
+      const width = Math.max(320, win.innerWidth);
+      const height = Math.max(240, win.innerHeight);
+      (host as HTMLElement).style.width = `${width}px`;
+      (host as HTMLElement).style.height = `${height}px`;
+      const app = doc.getElementById("app") as HTMLElement | null;
+      if (app) {
+        app.style.width = `${width}px`;
+        app.style.height = `${height}px`;
+      }
+      this.cy?.resize().fit(undefined, 48);
+    };
+    this.window?.addEventListener("resize", resizeShell);
+    this.cleanups.push(() =>
+      this.window?.removeEventListener("resize", resizeShell),
+    );
     host.replaceChildren();
     const app = append(doc, host, "div", { id: "app" });
+    resizeShell();
     const header = append(doc, app, "header");
     append(doc, header, "h1", { id: "heading", text: "作者—标签关系网" });
+    const maximize = append(doc, header, "button", {
+      id: "maximize",
+      text: "最大化",
+    });
+    maximize.type = "button";
+    const toggleMaximize = () => {
+      const win = this.window;
+      if (!win) return;
+      if (win.windowState === win.STATE_MAXIMIZED) {
+        win.restore();
+        maximize.textContent = "最大化";
+      } else {
+        win.maximize();
+        maximize.textContent = "还原";
+      }
+    };
+    maximize.addEventListener("click", toggleMaximize);
     const search = append(doc, header, "input", { id: "search" });
     search.type = "search";
     search.placeholder = "搜索作者或标签";
@@ -259,6 +295,7 @@ export class GraphWindowController {
       () => search.removeEventListener("input", searchHandler),
       () => threshold.removeEventListener("input", thresholdHandler),
       () => distance.removeEventListener("input", distanceHandler),
+      () => maximize.removeEventListener("click", toggleMaximize),
     );
   }
 

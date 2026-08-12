@@ -6,9 +6,16 @@ import {
   previewAiTags,
   replaceManualTags,
 } from "./modules/aiTagging";
+import {
+  isEasyScholarAutoUpdateEnabled,
+  isEasyScholarConfigured,
+  updateEasyScholarItem,
+} from "./modules/easyScholar";
 
 const TOOLBAR_BUTTON_ID = "zotero-puls-graph-button";
 const AI_TAG_MENU_ID = "zotero-puls-ai-tag-menuitem";
+const EASY_SCHOLAR_MENU_ID = "zotero-puls-easyscholar-menuitem";
+let easyScholarNotifierID: string | undefined;
 
 async function onStartup(): Promise<void> {
   await Promise.all([
@@ -21,6 +28,7 @@ async function onStartup(): Promise<void> {
     Zotero.getMainWindows().map((win) => onMainWindowLoad(win)),
   );
   await registerPreferencesPane();
+  registerEasyScholarNotifier();
   addon.data.initialized = true;
 }
 
@@ -37,6 +45,68 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
   addon.data.ztoolkit = createZToolkit();
   registerToolbarButton(win);
   registerAiTagMenu(win);
+  registerEasyScholarMenu(win);
+}
+
+function registerEasyScholarNotifier(): void {
+  if (easyScholarNotifierID) return;
+  easyScholarNotifierID = Zotero.Notifier.registerObserver(
+    {
+      notify: (event, type, ids) => {
+        if (
+          event !== "add" ||
+          type !== "item" ||
+          !isEasyScholarAutoUpdateEnabled() ||
+          !isEasyScholarConfigured()
+        )
+          return;
+        for (const item of Zotero.Items.get(ids as number[])) {
+          if (!item.isRegularItem()) continue;
+          void updateEasyScholarItem(item).catch((error) =>
+            ztoolkit.log("EasyScholar automatic update failed", error),
+          );
+        }
+      },
+    },
+    ["item"],
+    "zotero-puls-easyscholar",
+  );
+}
+
+function registerEasyScholarMenu(win: _ZoteroTypes.MainWindow): void {
+  const doc = win.document;
+  if (doc.getElementById(EASY_SCHOLAR_MENU_ID)) return;
+  const popup = doc.getElementById("zotero-itemmenu");
+  if (!popup) return;
+  const item = doc.createXULElement("menuitem");
+  item.id = EASY_SCHOLAR_MENU_ID;
+  item.setAttribute("label", "更新 EasyScholar 信息");
+  const updateVisibility = () => {
+    const selected = win.ZoteroPane.getSelectedItems();
+    item.setAttribute(
+      "hidden",
+      String(selected.length !== 1 || !selected[0].isRegularItem()),
+    );
+  };
+  popup.addEventListener("popupshowing", updateVisibility);
+  item.addEventListener("command", () => void runEasyScholarUpdate(win));
+  popup.appendChild(item);
+}
+
+async function runEasyScholarUpdate(
+  win: _ZoteroTypes.MainWindow,
+): Promise<void> {
+  const item = win.ZoteroPane.getSelectedItems()[0];
+  if (!item?.isRegularItem()) return;
+  try {
+    const updated = await updateEasyScholarItem(item);
+    if (updated) win.alert("EasyScholar 信息已更新到“其他”字段。");
+    else win.alert("未找到可写入的 EasyScholar 信息，请检查期刊或会议名称。");
+  } catch (error) {
+    win.alert(
+      `更新 EasyScholar 信息失败：${error instanceof Error ? error.message : error}`,
+    );
+  }
 }
 
 function registerAiTagMenu(win: _ZoteroTypes.MainWindow): void {
@@ -112,6 +182,7 @@ function registerToolbarButton(win: _ZoteroTypes.MainWindow): void {
 async function onMainWindowUnload(win: Window): Promise<void> {
   win.document.getElementById(TOOLBAR_BUTTON_ID)?.remove();
   win.document.getElementById(AI_TAG_MENU_ID)?.remove();
+  win.document.getElementById(EASY_SCHOLAR_MENU_ID)?.remove();
 }
 
 function onShutdown(): void {
@@ -119,7 +190,10 @@ function onShutdown(): void {
   for (const win of Zotero.getMainWindows()) {
     win.document.getElementById(TOOLBAR_BUTTON_ID)?.remove();
     win.document.getElementById(AI_TAG_MENU_ID)?.remove();
+    win.document.getElementById(EASY_SCHOLAR_MENU_ID)?.remove();
   }
+  if (easyScholarNotifierID)
+    Zotero.Notifier.unregisterObserver(easyScholarNotifierID);
   ztoolkit.unregisterAll();
   addon.data.alive = false;
   // @ts-expect-error Plugin instance is intentionally removed on shutdown
