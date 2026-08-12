@@ -17,6 +17,14 @@ Zotero Puls 是一个用于查看 Zotero 作者—标签关系的插件。
 5. 双击论文条目可回到 Zotero 定位该条目。
 6. 单击图谱空白处取消选中；双击空白处刷新当前分类。
 
+## AI 生成英文标签
+
+在文献列表中右键单击一篇普通文献，选择“AI 生成标签”。插件会将标题和 Abstract 发送给你配置的服务，返回英文标签建议。你可以在预览窗口中勾选、删除或补充标签。
+
+确认写入前会显示替换提示：现有手动标签会被替换，Zotero 自动标签不会受影响。
+
+在 Zotero 的“设置 → Zotero Puls”中配置服务商、Base URL、API Key、模型、默认标签数和自定义提示词。首版预设支持 OpenAI Chat Completions 兼容接口：DeepSeek 使用 `https://api.deepseek.com` 与 `deepseek-v4-flash`，OpenAI 使用 `https://api.openai.com/v1`。
+
 ## 数据范围
 
 - 只读取当前分类的直接普通条目。

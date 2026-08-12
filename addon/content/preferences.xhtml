@@ -1,0 +1,37 @@
+<groupbox id="zotero-puls-preferences" onload="ZoteroPulsPreferences.init()">
+  <label><html:h2>Zotero Puls</html:h2></label>
+  <description
+    >配置 AI 英文标签生成服务。API Key 仅保存在本机 Zotero 配置中。</description
+  >
+  <groupbox>
+    <label><html:strong>AI 标签服务</html:strong></label>
+    <html:label
+      >服务商
+      <html:select id="zotero-puls-ai-provider"
+        ><html:option value="deepseek">DeepSeek</html:option
+        ><html:option value="openai">OpenAI</html:option
+        ><html:option value="custom">自定义兼容服务</html:option></html:select
+      ></html:label
+    >
+    <html:label
+      >Base URL <html:input id="zotero-puls-ai-base-url" type="url" size="42"
+    /></html:label>
+    <html:label
+      >API Key
+      <html:input id="zotero-puls-ai-api-key" type="password" size="42"
+    /></html:label>
+    <html:label
+      >模型 <html:input id="zotero-puls-ai-model" type="text" size="42"
+    /></html:label>
+    <html:label
+      >默认标签数
+      <html:input id="zotero-puls-ai-tag-count" type="number" min="1" max="20"
+    /></html:label>
+  </groupbox>
+  <groupbox>
+    <label><html:strong>提示词</html:strong></label>
+    <description>系统会自动附加论文标题、Abstract 和标签数量要求。</description>
+    <html:textarea id="zotero-puls-ai-prompt" rows="6" cols="64" />
+  </groupbox>
+  <button label="保存设置" oncommand="ZoteroPulsPreferences.save()" />
+</groupbox>

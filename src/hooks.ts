@@ -1,8 +1,14 @@
 import { createZToolkit } from "./utils/ztoolkit";
 import { buildCurrentCollectionGraph } from "./modules/graphData";
 import { graphWindowController } from "./modules/graphWindow";
+import {
+  generateAiTags,
+  previewAiTags,
+  replaceManualTags,
+} from "./modules/aiTagging";
 
 const TOOLBAR_BUTTON_ID = "zotero-puls-graph-button";
+const AI_TAG_MENU_ID = "zotero-puls-ai-tag-menuitem";
 
 async function onStartup(): Promise<void> {
   await Promise.all([
@@ -14,12 +20,72 @@ async function onStartup(): Promise<void> {
   await Promise.all(
     Zotero.getMainWindows().map((win) => onMainWindowLoad(win)),
   );
+  registerPreferencesPane();
   addon.data.initialized = true;
+}
+
+function registerPreferencesPane(): void {
+  const preferencePanes = (
+    Zotero as typeof Zotero & {
+      PreferencePanes?: {
+        register: (options: Record<string, unknown>) => void;
+      };
+    }
+  ).PreferencePanes;
+  preferencePanes?.register({
+    pluginID: addon.data.config.addonID,
+    src: "preferences.xhtml",
+    scripts: ["preferences.js"],
+  });
 }
 
 async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
   addon.data.ztoolkit = createZToolkit();
   registerToolbarButton(win);
+  registerAiTagMenu(win);
+}
+
+function registerAiTagMenu(win: _ZoteroTypes.MainWindow): void {
+  const doc = win.document;
+  if (doc.getElementById(AI_TAG_MENU_ID)) return;
+  const popup = doc.getElementById("zotero-itemmenu");
+  if (!popup) return;
+  const item = doc.createXULElement("menuitem");
+  item.id = AI_TAG_MENU_ID;
+  item.setAttribute("label", "AI 生成标签");
+  const updateVisibility = () => {
+    const selected = win.ZoteroPane.getSelectedItems();
+    item.setAttribute(
+      "hidden",
+      String(selected.length !== 1 || !selected[0].isRegularItem()),
+    );
+  };
+  popup.addEventListener("popupshowing", updateVisibility);
+  item.addEventListener("command", () => void runAiTagging(win));
+  popup.appendChild(item);
+}
+
+async function runAiTagging(win: _ZoteroTypes.MainWindow): Promise<void> {
+  const item = win.ZoteroPane.getSelectedItems()[0];
+  if (!item?.isRegularItem()) return;
+  try {
+    const suggested = await generateAiTags(item);
+    const tags = await previewAiTags(win, suggested);
+    if (!tags?.length) return;
+    const manualCount = item.getTags().filter((tag) => tag.type !== 1).length;
+    if (
+      !win.confirm(
+        `将替换该论文的 ${manualCount} 个手动标签。自动标签不会受到影响。是否继续？`,
+      )
+    ) {
+      return;
+    }
+    await replaceManualTags(item, tags);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "生成标签时发生未知错误";
+    win.alert(`AI 生成标签失败：${message}`);
+  }
 }
 
 function registerToolbarButton(win: _ZoteroTypes.MainWindow): void {
@@ -51,12 +117,14 @@ function registerToolbarButton(win: _ZoteroTypes.MainWindow): void {
 
 async function onMainWindowUnload(win: Window): Promise<void> {
   win.document.getElementById(TOOLBAR_BUTTON_ID)?.remove();
+  win.document.getElementById(AI_TAG_MENU_ID)?.remove();
 }
 
 function onShutdown(): void {
   graphWindowController.close();
   for (const win of Zotero.getMainWindows()) {
     win.document.getElementById(TOOLBAR_BUTTON_ID)?.remove();
+    win.document.getElementById(AI_TAG_MENU_ID)?.remove();
   }
   ztoolkit.unregisterAll();
   addon.data.alive = false;

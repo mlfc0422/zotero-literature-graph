@@ -208,8 +208,12 @@ export class GraphWindowController {
     });
     const threshold = append(doc, thresholdLabel, "input", { id: "threshold" });
     threshold.type = "range";
-    threshold.min = threshold.value = "1";
-    append(doc, thresholdLabel, "span", { id: "threshold-value", text: "1" });
+    threshold.min = "1";
+    threshold.value = "1";
+    append(doc, thresholdLabel, "span", {
+      id: "threshold-value",
+      text: threshold.value,
+    });
     const distanceLabel = append(doc, header, "label", { text: "力平衡" });
     const distance = append(doc, distanceLabel, "input", { id: "distance" });
     distance.type = "range";
@@ -219,7 +223,7 @@ export class GraphWindowController {
     distance.value = "100";
     append(doc, distanceLabel, "span", {
       id: "distance-value",
-      text: "100 · 均衡",
+      text: this.getForceBalanceLabel(Number(distance.value)),
     });
     const main = append(doc, app, "main");
     append(doc, main, "section", { id: "canvas" });
@@ -437,6 +441,10 @@ export class GraphWindowController {
       attractionScale: 1 + compactness * 0.7,
       linkStrength: Math.max(0.3, Math.min(1, 0.7 + compactness * 0.4)),
     };
+  }
+
+  private getForceBalanceLabel(value: number): string {
+    return `${value} · ${value < 85 ? "松散" : value > 115 ? "紧密" : "均衡"}`;
   }
 
   private async startPhysics(forceProfile: ForceBalanceProfile): Promise<void> {
