@@ -1,4 +1,5 @@
 import {
+  getEasyScholarMetadataSignature,
   isEasyScholarAutoUpdateEnabled,
   isEasyScholarConfigured,
   updateEasyScholarItem,
@@ -12,6 +13,13 @@ import {
 const EASY_SCHOLAR_MENU_ID = "zotero-puls-easyscholar-menuitem";
 let notifierID: string | undefined;
 let columnDataKey: string | undefined;
+const pendingAutoUpdates = new Map<
+  number,
+  { timer: ReturnType<typeof setTimeout>; expiresAt: number; signature: string }
+>();
+const AUTO_UPDATE_QUIET_MS = 3000;
+const AUTO_UPDATE_RETRY_MS = 8000;
+const AUTO_UPDATE_WATCH_MS = 60000;
 
 export function registerEasyScholarColumn(): void {
   if (columnDataKey) return;
@@ -77,7 +85,7 @@ export function registerEasyScholarNotifier(): void {
     {
       notify: (event, type, ids) => {
         if (
-          event !== "add" ||
+          (event !== "add" && event !== "modify") ||
           type !== "item" ||
           !isEasyScholarAutoUpdateEnabled() ||
           !isEasyScholarConfigured()
@@ -85,8 +93,15 @@ export function registerEasyScholarNotifier(): void {
           return;
         for (const item of Zotero.Items.get(ids as number[])) {
           if (!item.isRegularItem()) continue;
-          void updateEasyScholarItem(item).catch((error) =>
-            ztoolkit.log("EasyScholar automatic update failed", error),
+          const existing = pendingAutoUpdates.get(item.id);
+          if (event === "modify" && !existing) continue;
+          const signature = getEasyScholarMetadataSignature(item);
+          if (event === "modify" && existing?.signature === signature) continue;
+          scheduleAutomaticUpdate(
+            item.id,
+            signature,
+            existing?.expiresAt ?? Date.now() + AUTO_UPDATE_WATCH_MS,
+            AUTO_UPDATE_QUIET_MS,
           );
         }
       },
@@ -94,6 +109,72 @@ export function registerEasyScholarNotifier(): void {
     ["item"],
     "zotero-puls-easyscholar",
   );
+}
+
+function scheduleAutomaticUpdate(
+  itemID: number,
+  signature: string,
+  expiresAt: number,
+  delay: number,
+): void {
+  const existing = pendingAutoUpdates.get(itemID);
+  if (existing) clearTimeout(existing.timer);
+  const timer = setTimeout(
+    () => void runAutomaticUpdate(itemID, expiresAt),
+    delay,
+  );
+  pendingAutoUpdates.set(itemID, { timer, expiresAt, signature });
+}
+
+async function runAutomaticUpdate(
+  itemID: number,
+  expiresAt: number,
+): Promise<void> {
+  if (!isEasyScholarAutoUpdateEnabled() || !isEasyScholarConfigured()) {
+    pendingAutoUpdates.delete(itemID);
+    return;
+  }
+  const item = Zotero.Items.get(itemID);
+  if (!item || !item.isRegularItem()) {
+    pendingAutoUpdates.delete(itemID);
+    return;
+  }
+  const signature = getEasyScholarMetadataSignature(item);
+  try {
+    const result = await updateEasyScholarItem(item);
+    if (result.status === "success") {
+      Zotero.ItemTreeManager.refreshColumns();
+      watchForMetadataChanges(itemID, signature, expiresAt);
+      return;
+    }
+    if (result.status === "missing-venue" && Date.now() < expiresAt) {
+      scheduleAutomaticUpdate(
+        itemID,
+        signature,
+        expiresAt,
+        AUTO_UPDATE_RETRY_MS,
+      );
+      return;
+    }
+    watchForMetadataChanges(itemID, signature, expiresAt);
+  } catch (error) {
+    pendingAutoUpdates.delete(itemID);
+    ztoolkit.log("EasyScholar automatic update failed", error);
+  }
+}
+
+function watchForMetadataChanges(
+  itemID: number,
+  signature: string,
+  expiresAt: number,
+): void {
+  const remaining = expiresAt - Date.now();
+  if (remaining <= 0) {
+    pendingAutoUpdates.delete(itemID);
+    return;
+  }
+  const timer = setTimeout(() => pendingAutoUpdates.delete(itemID), remaining);
+  pendingAutoUpdates.set(itemID, { timer, expiresAt, signature });
 }
 
 function registerMenu(win: _ZoteroTypes.MainWindow): void {
@@ -120,12 +201,25 @@ async function runUpdate(win: _ZoteroTypes.MainWindow): Promise<void> {
   const item = win.ZoteroPane.getSelectedItems()[0];
   if (!item?.isRegularItem()) return;
   try {
-    const updated = await updateEasyScholarItem(item);
-    if (updated) Zotero.ItemTreeManager.refreshColumns();
+    const result = await updateEasyScholarItem(item);
+    if (result.status === "success") {
+      Zotero.ItemTreeManager.refreshColumns();
+      win.alert(
+        `EasyScholar 信息已更新。\n匹配名称：${result.matchedName}${result.resolvedPublishedVersion ? "\n该名称来自识别到的正式发表版本，未修改原条目元数据。" : ""}`,
+      );
+      return;
+    }
+    if (result.status === "missing-venue") {
+      win.alert("该条目缺少可用于查询的刊名、会议名或论文集名称。");
+      return;
+    }
+    const attempted = result.attemptedNames
+      .map((name) => `• ${name}`)
+      .join("\n");
     win.alert(
-      updated
-        ? "EasyScholar 信息已更新到“其他”字段。"
-        : "未找到可写入的 EasyScholar 信息，请检查期刊或会议名称。",
+      result.status === "no-selected-data"
+        ? `EasyScholar 找到了刊物，但没有返回设置中所选的字段。\n\n已尝试：\n${attempted}`
+        : `EasyScholar 未找到该期刊或会议。\n\n已尝试：\n${attempted}`,
     );
   } catch (error) {
     win.alert(
@@ -139,6 +233,9 @@ export function unregisterEasyScholarFeature(win: Window): void {
 }
 
 export function shutdownEasyScholarFeature(): void {
+  for (const pending of pendingAutoUpdates.values())
+    clearTimeout(pending.timer);
+  pendingAutoUpdates.clear();
   if (notifierID) {
     Zotero.Notifier.unregisterObserver(notifierID);
     notifierID = undefined;

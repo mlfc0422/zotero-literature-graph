@@ -1,7 +1,7 @@
 export interface JsonHttpOptions {
   body?: string;
   headers?: Record<string, string>;
-  responseType: "json";
+  responseType: "json" | "text";
   timeout: number;
 }
 

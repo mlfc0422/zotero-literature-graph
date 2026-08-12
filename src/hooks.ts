@@ -18,6 +18,11 @@ import {
   unregisterEasyScholarFeature,
 } from "./features/easyScholar/register";
 import { registerPreferencesPane } from "./features/preferences/register";
+import {
+  registerPublicationResolverFeature,
+  unregisterPublicationResolverFeature,
+} from "./features/publicationResolver/register";
+import { findPublishedVersion } from "./modules/publicationResolver";
 
 async function onStartup(): Promise<void> {
   await Promise.all([
@@ -39,12 +44,14 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
   registerGraphFeature(win);
   registerAiTagFeature(win);
   registerEasyScholarFeature(win);
+  registerPublicationResolverFeature(win);
 }
 
 async function onMainWindowUnload(win: Window): Promise<void> {
   unregisterGraphFeature(win);
   unregisterAiTagFeature(win);
   unregisterEasyScholarFeature(win);
+  unregisterPublicationResolverFeature(win);
 }
 
 function onShutdown(): void {
@@ -61,6 +68,7 @@ export default { onStartup, onShutdown, onMainWindowLoad, onMainWindowUnload };
 
 export const pluginApi = {
   buildCurrentCollectionGraph,
+  findPublishedVersion,
   openGraphWindow: (win?: _ZoteroTypes.MainWindow) =>
     graphWindowController.openOrRefresh(win),
 };

@@ -49,6 +49,15 @@ export const EASY_SCHOLAR_FIELDS = [
 
 export type EasyScholarFieldKey = (typeof EASY_SCHOLAR_FIELDS)[number][0];
 
+export interface VenueCandidateInput {
+  value: string;
+  source: string;
+}
+
+export interface VenueCandidate extends VenueCandidateInput {
+  normalized: string;
+}
+
 export interface EasyScholarResponse {
   code?: number;
   data?: {
@@ -90,6 +99,36 @@ export function formatCustomRanks(response: EasyScholarResponse): string[] {
     const rank = dataSet?.[levelFields[Number(levelText) - 1]];
     return dataSet?.abbName && rank ? [`${dataSet.abbName} ${rank}`] : [];
   });
+}
+
+export function buildVenueCandidates(
+  inputs: VenueCandidateInput[],
+  limit = 5,
+): VenueCandidate[] {
+  const candidates: VenueCandidate[] = [];
+  const seen = new Set<string>();
+  for (const input of inputs) {
+    const original = input.value
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/[。.]$/, "");
+    if (!original) continue;
+    const cleaned = original
+      .replace(/^proceedings\s+of\s+(?:the\s+)?/i, "")
+      .replace(/^\s*(?:19|20)\d{2}\s+/, "")
+      .replace(/\s*[([](?:19|20)\d{2}[)\]]\s*$/, "")
+      .replace(/\s*,?\s*(?:vol(?:ume)?\.?)\s*\d+\s*$/i, "")
+      .trim();
+    for (const value of [original, cleaned]) {
+      if (!value) continue;
+      const normalized = value.toLocaleLowerCase().replace(/\s+/g, " ");
+      if (seen.has(normalized)) continue;
+      seen.add(normalized);
+      candidates.push({ value, source: input.source, normalized });
+      if (candidates.length >= limit) return candidates;
+    }
+  }
+  return candidates;
 }
 
 export function formatEasyScholarLines(
