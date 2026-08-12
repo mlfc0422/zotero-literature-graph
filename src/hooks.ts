@@ -20,22 +20,16 @@ async function onStartup(): Promise<void> {
   await Promise.all(
     Zotero.getMainWindows().map((win) => onMainWindowLoad(win)),
   );
-  registerPreferencesPane();
+  await registerPreferencesPane();
   addon.data.initialized = true;
 }
 
-function registerPreferencesPane(): void {
-  const preferencePanes = (
-    Zotero as typeof Zotero & {
-      PreferencePanes?: {
-        register: (options: Record<string, unknown>) => void;
-      };
-    }
-  ).PreferencePanes;
-  preferencePanes?.register({
+async function registerPreferencesPane(): Promise<void> {
+  await Zotero.PreferencePanes.register({
     pluginID: addon.data.config.addonID,
-    src: "preferences.xhtml",
-    scripts: ["preferences.js"],
+    id: "zotero-puls-preferences",
+    src: `chrome://${addon.data.config.addonRef}/content/preferences.xhtml`,
+    scripts: [`chrome://${addon.data.config.addonRef}/content/preferences.js`],
   });
 }
 

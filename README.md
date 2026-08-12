@@ -23,7 +23,7 @@ Zotero Puls 是一个用于查看 Zotero 作者—标签关系的插件。
 
 确认写入前会显示替换提示：现有手动标签会被替换，Zotero 自动标签不会受影响。
 
-在 Zotero 的“设置 → Zotero Puls”中配置服务商、Base URL、API Key、模型、默认标签数和自定义提示词。首版预设支持 OpenAI Chat Completions 兼容接口：DeepSeek 使用 `https://api.deepseek.com` 与 `deepseek-v4-flash`，OpenAI 使用 `https://api.openai.com/v1`。
+在 Zotero 的“设置 → Zotero Puls”中选择服务商、模型、填写对应 API Key，并配置默认标签数和自定义提示词。DeepSeek 的模型列表提供固定的 V4 Flash 与 V4 Pro；选择 OpenAI 后，点击“获取可用模型”会使用该 API Key 读取可访问的模型，并由你选择其一。OpenAI 套餐使用 Responses API 与严格 JSON Schema 输出；DeepSeek 套餐使用 Chat Completions 兼容接口。
 
 ## 数据范围
 

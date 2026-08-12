@@ -1,10 +1,11 @@
 const PREF_PREFIX = "extensions.zotero.zoteropuls.ai.";
 
 export interface AiTagSettings {
-  provider: "openai" | "deepseek" | "custom";
+  provider: "deepseek" | "openai";
   baseURL: string;
   apiKey: string;
   model: string;
+  api: "chat-completions" | "responses";
   tagCount: number;
   prompt: string;
 }
@@ -14,18 +15,42 @@ const DEFAULT_PROMPT = `Generate concise English academic tags for the paper bel
 export function getAiTagSettings(): AiTagSettings {
   const get = (key: string, fallback: string) =>
     String(Zotero.Prefs.get(`${PREF_PREFIX}${key}`, true) ?? fallback);
-  const provider = get("provider", "deepseek") as AiTagSettings["provider"];
-  const defaultBaseURL =
-    provider === "openai"
-      ? "https://api.openai.com/v1"
-      : "https://api.deepseek.com";
-  const defaultModel =
-    provider === "openai" ? "gpt-4.1-mini" : "deepseek-v4-flash";
+  const storedProvider = get("provider", "deepseek");
+  const provider = (
+    storedProvider === "openai" || storedProvider === "openai-mini"
+      ? "openai"
+      : "deepseek"
+  ) as AiTagSettings["provider"];
+  const preset = {
+    deepseek: {
+      baseURL: "https://api.deepseek.com",
+      model: get(
+        "deepseekModel",
+        storedProvider === "deepseek-pro"
+          ? "deepseek-v4-pro"
+          : "deepseek-v4-flash",
+      ),
+      apiKey: "deepseekApiKey",
+      api: "chat-completions" as const,
+    },
+    openai: {
+      baseURL: "https://api.openai.com/v1",
+      model: get("openaiModel", ""),
+      apiKey: "openaiApiKey",
+      api: "responses" as const,
+    },
+  }[provider] ?? {
+    baseURL: "https://api.deepseek.com",
+    model: "deepseek-v4-flash",
+    apiKey: "deepseekApiKey",
+    api: "chat-completions" as const,
+  };
   return {
     provider,
-    baseURL: get("baseURL", defaultBaseURL).replace(/\/$/, ""),
-    apiKey: get("apiKey", ""),
-    model: get("model", defaultModel),
+    baseURL: preset.baseURL,
+    apiKey: get(preset.apiKey, get("apiKey", "")),
+    model: preset.model,
+    api: preset.api,
     tagCount: Math.max(1, Math.min(20, Number(get("tagCount", "5")) || 5)),
     prompt: get("prompt", DEFAULT_PROMPT),
   };
@@ -51,27 +76,56 @@ export async function generateAiTags(item: Zotero.Item): Promise<string[]> {
   if (!settings.apiKey)
     throw new Error("请先在 Zotero Puls 设置中填写 API Key");
   if (!settings.baseURL || !settings.model) {
-    throw new Error("请先在 Zotero Puls 设置中填写 Base URL 和模型名称");
+    throw new Error("请先在 Zotero Puls 设置中获取并选择 OpenAI 模型");
   }
   const title = String(item.getField("title") || "").trim();
   const abstract = String(item.getField("abstractNote") || "").trim();
   if (!abstract) throw new Error("该论文没有 Abstract，无法生成标签");
+  const requestBody =
+    settings.api === "responses"
+      ? {
+          model: settings.model,
+          input: [
+            { role: "developer", content: settings.prompt },
+            {
+              role: "user",
+              content: `Generate exactly ${settings.tagCount} English tags.\n\nTitle: ${title}\n\nAbstract: ${abstract}`,
+            },
+          ],
+          text: {
+            format: {
+              type: "json_schema",
+              name: "paper_tags",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  tags: { type: "array", items: { type: "string" } },
+                },
+                required: ["tags"],
+                additionalProperties: false,
+              },
+            },
+          },
+          store: false,
+        }
+      : {
+          model: settings.model,
+          messages: [
+            { role: "system", content: settings.prompt },
+            {
+              role: "user",
+              content: `Generate exactly ${settings.tagCount} English tags.\n\nTitle: ${title}\n\nAbstract: ${abstract}`,
+            },
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.2,
+        };
   const response = await Zotero.HTTP.request(
     "POST",
-    `${settings.baseURL}/chat/completions`,
+    `${settings.baseURL}/${settings.api === "responses" ? "responses" : "chat/completions"}`,
     {
-      body: JSON.stringify({
-        model: settings.model,
-        messages: [
-          { role: "system", content: settings.prompt },
-          {
-            role: "user",
-            content: `Generate exactly ${settings.tagCount} English tags.\n\nTitle: ${title}\n\nAbstract: ${abstract}`,
-          },
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.2,
-      }),
+      body: JSON.stringify(requestBody),
       headers: {
         Authorization: `Bearer ${settings.apiKey}`,
         "Content-Type": "application/json",
@@ -82,8 +136,17 @@ export async function generateAiTags(item: Zotero.Item): Promise<string[]> {
   );
   const body = response.response as {
     choices?: Array<{ message?: { content?: string } }>;
+    output_text?: string;
+    output?: Array<{ content?: Array<{ text?: string }> }>;
   };
-  const content = body.choices?.[0]?.message?.content;
+  const content =
+    settings.api === "responses"
+      ? (body.output_text ??
+        body.output
+          ?.flatMap((output) => output.content ?? [])
+          .map((content) => content.text ?? "")
+          .join(""))
+      : body.choices?.[0]?.message?.content;
   if (!content) throw new Error("模型没有返回标签内容");
   let parsed: unknown;
   try {
