@@ -1,6 +1,6 @@
 # Zotero Puls
 
-Zotero Puls 是一个用于查看 Zotero 作者—标签关系的插件。
+Zotero Puls 是一个多功能插件。
 
 ## 安装
 
