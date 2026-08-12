@@ -14,6 +14,7 @@ var ZoteroPulsPreferences = {
   },
   deepseekModels: ["deepseek-v4-flash", "deepseek-v4-pro"],
   easyScholarFields: [
+    ["customRank", "自定义数据集等级"],
     ["sci", "JCR 分区"],
     ["ssci", "SSCI 分区"],
     ["sciBase", "中科院基础版分区"],
@@ -109,11 +110,28 @@ Output JSON only, with no explanation or additional text:
   get(id) {
     return document.getElementById(`zotero-puls-ai-${id}`);
   },
+  getEasyScholar(id) {
+    return document.getElementById(`zotero-puls-es-${id}`);
+  },
   init() {
     const root = document.getElementById("zotero-puls-preferences");
-    if (!root) return window.setTimeout(() => this.init(), 0);
+    const requiredControls = [
+      "provider",
+      "api-key",
+      "model",
+      "tag-count",
+      "prompt",
+      "fetch-models",
+    ];
+    if (
+      !root ||
+      requiredControls.some((id) => !this.get(id)) ||
+      !this.getEasyScholar("secret-key") ||
+      !this.getEasyScholar("auto-update") ||
+      !this.getEasyScholar("fields")
+    )
+      return window.setTimeout(() => this.init(), 10);
     if (root.dataset.initialized === "true") return;
-    root.dataset.initialized = "true";
     const provider = this.get("provider");
     const savedProvider =
       Zotero.Prefs.get(`${this.prefix}provider`, true) || "deepseek";
@@ -138,10 +156,12 @@ Output JSON only, with no explanation or additional text:
       Zotero.Prefs.get(`${this.prefix}prompt`, true) || this.prompt;
     root.dataset.provider = provider.value;
     provider.addEventListener("change", () => {
-      Zotero.Prefs.set(`${this.prefix}provider`, provider.value, true);
+      this.persistProvider();
       this.updatePackage();
     });
-    this.get("api-key").addEventListener("input", () => this.persistApiKey());
+    ["input", "change", "blur"].forEach((event) =>
+      this.get("api-key").addEventListener(event, () => this.persistApiKey()),
+    );
     this.get("model").addEventListener("change", () => this.persistModel());
     this.get("tag-count").addEventListener("input", () =>
       this.persistTagCount(),
@@ -149,41 +169,41 @@ Output JSON only, with no explanation or additional text:
     this.get("tag-count").addEventListener("change", () =>
       this.persistTagCount(),
     );
+    this.get("tag-count").addEventListener("blur", () =>
+      this.persistTagCount(),
+    );
     this.get("prompt").addEventListener("input", () => this.persistPrompt());
     this.get("prompt").addEventListener("change", () => this.persistPrompt());
+    this.get("prompt").addEventListener("blur", () => this.persistPrompt());
     this.get("fetch-models").addEventListener("click", () =>
       this.fetchOpenAIModels(),
     );
-    this.initEasyScholar();
     this.updatePackage();
+    this.initEasyScholar();
+    root.dataset.initialized = "true";
   },
   initEasyScholar() {
-    const key = this.get("es-secret-key");
-    const auto = this.get("es-auto-update");
+    const key = this.getEasyScholar("secret-key");
+    const auto = this.getEasyScholar("auto-update");
+    const host = this.getEasyScholar("fields");
+    if (!key || !auto || !host) return;
     key.value =
       Zotero.Prefs.get(
         "extensions.zotero.zoteropuls.easyscholar.secretKey",
         true,
       ) || "";
     auto.checked =
-      Zotero.Prefs.get(
-        "extensions.zotero.zoteropuls.easyscholar.autoUpdate",
-        true,
-      ) !== false;
-    key.addEventListener("input", () =>
-      Zotero.Prefs.set(
-        "extensions.zotero.zoteropuls.easyscholar.secretKey",
-        key.value.trim(),
-        true,
-      ),
-    );
-    auto.addEventListener("change", () =>
-      Zotero.Prefs.set(
-        "extensions.zotero.zoteropuls.easyscholar.autoUpdate",
-        auto.checked,
-        true,
-      ),
-    );
+      String(
+        Zotero.Prefs.get(
+          "extensions.zotero.zoteropuls.easyscholar.autoUpdate",
+          true,
+        ),
+      ) !== "false";
+    const persistSecretKey = () => this.persistEasyScholarSecretKey();
+    key.addEventListener("input", persistSecretKey);
+    key.addEventListener("change", persistSecretKey);
+    key.addEventListener("blur", persistSecretKey);
+    auto.addEventListener("change", () => this.persistEasyScholarAutoUpdate());
     let selected;
     try {
       selected = JSON.parse(
@@ -197,9 +217,10 @@ Output JSON only, with no explanation or additional text:
     }
     if (!selected.length)
       selected = this.easyScholarFields.map(([field]) => field);
-    const host = this.get("es-fields");
     host.replaceChildren();
-    this.easyScholarFields.forEach(([field, label]) => {
+    Array.from(
+      new Map(this.easyScholarFields.map(([field, label]) => [field, label])),
+    ).forEach(([field, label]) => {
       const row = document.createElement("label");
       row.style.display = "inline-block";
       row.style.marginRight = "12px";
@@ -213,19 +234,48 @@ Output JSON only, with no explanation or additional text:
     });
   },
   persistEasyScholarFields() {
-    const fields = [
-      ...this.get("es-fields").querySelectorAll("input:checked"),
-    ].map((input) => input.value);
+    const host = this.getEasyScholar("fields");
+    if (!host) return;
+    const fields = [...host.querySelectorAll("input:checked")].map(
+      (input) => input.value,
+    );
     Zotero.Prefs.set(
       "extensions.zotero.zoteropuls.easyscholar.fields",
       JSON.stringify(fields),
       true,
     );
   },
+  persistEasyScholarSecretKey() {
+    const key = this.getEasyScholar("secret-key");
+    if (!key) return;
+    Zotero.Prefs.set(
+      "extensions.zotero.zoteropuls.easyscholar.secretKey",
+      key.value.trim(),
+      true,
+    );
+  },
+  persistEasyScholarAutoUpdate() {
+    const auto = this.getEasyScholar("auto-update");
+    if (!auto) return;
+    Zotero.Prefs.set(
+      "extensions.zotero.zoteropuls.easyscholar.autoUpdate",
+      auto.checked,
+      true,
+    );
+  },
+  normalizeProvider(provider) {
+    return provider === "openai" ? "openai" : "deepseek";
+  },
+  persistProvider() {
+    const provider = this.normalizeProvider(this.get("provider").value);
+    this.get("provider").value = provider;
+    Zotero.Prefs.set(`${this.prefix}provider`, provider, true);
+    return provider;
+  },
   persistApiKey(provider) {
-    const root = document.getElementById("zotero-puls-preferences");
-    const activeProvider =
-      provider || root.dataset.provider || this.get("provider").value;
+    const activeProvider = this.normalizeProvider(
+      provider || this.get("provider").value,
+    );
     const preset = this.packages[activeProvider];
     if (preset)
       Zotero.Prefs.set(
@@ -241,7 +291,7 @@ Output JSON only, with no explanation or additional text:
     Zotero.Prefs.set(`${this.prefix}tagCount`, value, true);
   },
   persistModel() {
-    const provider = this.get("provider").value;
+    const provider = this.normalizeProvider(this.get("provider").value);
     const model = this.get("model").value;
     if (model) Zotero.Prefs.set(`${this.prefix}${provider}Model`, model, true);
   },
@@ -253,7 +303,7 @@ Output JSON only, with no explanation or additional text:
     );
   },
   updatePackage() {
-    const provider = this.get("provider").value;
+    const provider = this.persistProvider();
     const preset = this.packages[provider];
     const isOpenAI = provider === "openai";
     this.get("package-description").textContent = preset.description;
@@ -261,7 +311,9 @@ Output JSON only, with no explanation or additional text:
       Zotero.Prefs.get(`${this.prefix}${preset.key}`, true) || "";
     document.getElementById("zotero-puls-preferences").dataset.provider =
       provider;
-    this.get("fetch-models").hidden = !isOpenAI;
+    const fetchButton = this.get("fetch-models");
+    fetchButton.hidden = !isOpenAI;
+    fetchButton.style.display = isOpenAI ? "inline-block" : "none";
     if (isOpenAI) {
       this.setModelOptions(
         [],
@@ -313,7 +365,7 @@ Output JSON only, with no explanation or additional text:
       );
       const models = (response.response.data || [])
         .map((model) => model.id)
-        .filter((id) => /^(gpt|o[134])[-\w.]*$/i.test(id))
+        .filter((id) => /^(gpt|o\d+)[-\w.]*$/i.test(id))
         .filter(
           (id) =>
             !/audio|realtime|transcribe|tts|image|search|codex|chat-latest/i.test(
@@ -329,6 +381,7 @@ Output JSON only, with no explanation or additional text:
         models,
         Zotero.Prefs.get(`${this.prefix}openaiModel`, true) || models[0],
       );
+      this.persistModel();
     } catch (error) {
       alert(
         `\u83b7\u53d6 OpenAI \u6a21\u578b\u5931\u8d25\uff1a${error.message || error}`,

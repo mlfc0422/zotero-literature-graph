@@ -1,8 +1,10 @@
 const PREF_PREFIX = "extensions.zotero.zoteropuls.easyscholar.";
 const BLOCK_START = "[EasyScholar]";
 const BLOCK_END = "[/EasyScholar]";
+let nextEasyScholarRequestAt = 0;
 
 export const EASY_SCHOLAR_FIELDS = [
+  ["customRank", "自定义数据集等级"],
   ["sci", "JCR 分区"],
   ["ssci", "SSCI 分区"],
   ["sciBase", "中科院基础版分区"],
@@ -52,7 +54,22 @@ export const EASY_SCHOLAR_FIELDS = [
 
 type EasyScholarFieldKey = (typeof EASY_SCHOLAR_FIELDS)[number][0];
 type EasyScholarResponse = {
-  data?: { officialRank?: { all?: Record<string, unknown> } };
+  code?: number;
+  data?: {
+    officialRank?: { all?: Record<string, unknown> };
+    customRank?: {
+      rankInfo?: Array<{
+        uuid?: string;
+        abbName?: string;
+        oneRankText?: string;
+        twoRankText?: string;
+        threeRankText?: string;
+        fourRankText?: string;
+        fiveRankText?: string;
+      }>;
+      rank?: string[];
+    };
+  };
   msg?: string;
 };
 
@@ -61,14 +78,16 @@ function getPref(key: string, fallback = ""): string {
 }
 
 export function getEasyScholarSelectedFields(): EasyScholarFieldKey[] {
+  const defaults = EASY_SCHOLAR_FIELDS.map(([key]) => key);
   try {
     const keys = JSON.parse(getPref("fields", "[]")) as string[];
     const valid = new Set(EASY_SCHOLAR_FIELDS.map(([key]) => key));
-    return keys.filter((key): key is EasyScholarFieldKey =>
+    const selected = keys.filter((key): key is EasyScholarFieldKey =>
       valid.has(key as EasyScholarFieldKey),
     );
+    return selected.length ? selected : defaults;
   } catch {
-    return [];
+    return defaults;
   }
 }
 
@@ -78,6 +97,46 @@ function getVenue(item: Zotero.Item): string {
       ? item.getField("publicationTitle")
       : item.getField("conferenceName"),
   ).trim();
+}
+
+async function respectEasyScholarRateLimit(): Promise<void> {
+  const scheduledAt = Math.max(Date.now(), nextEasyScholarRequestAt);
+  nextEasyScholarRequestAt = scheduledAt + 500;
+  const delay = scheduledAt - Date.now();
+  if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
+}
+
+function formatCustomRanks(response: EasyScholarResponse): string[] {
+  const custom = response.data?.customRank;
+  if (!custom?.rank?.length || !custom.rankInfo?.length) return [];
+  const dataSetByID = new Map(
+    custom.rankInfo
+      .filter(
+        (
+          entry,
+        ): entry is Required<Pick<(typeof custom.rankInfo)[number], "uuid">> &
+          typeof entry => Boolean(entry.uuid),
+      )
+      .map((entry) => [entry.uuid, entry]),
+  );
+  return custom.rank.flatMap((encoded) => {
+    const [uuid, levelText] = encoded.split("&&&");
+    const dataSet = dataSetByID.get(uuid);
+    const level = Number(levelText);
+    const rank =
+      dataSet?.[
+        [
+          "oneRankText",
+          "twoRankText",
+          "threeRankText",
+          "fourRankText",
+          "fiveRankText",
+        ][level - 1] as keyof typeof dataSet
+      ];
+    return dataSet?.abbName && typeof rank === "string" && rank
+      ? [`${dataSet.abbName} ${rank}`]
+      : [];
+  });
 }
 
 export async function updateEasyScholarItem(
@@ -92,17 +151,20 @@ export async function updateEasyScholarItem(
   const selected = getEasyScholarSelectedFields();
   if (!selected.length) throw new Error("请至少选择一个 EasyScholar 信息字段");
 
-  const url = `https://easyscholar.cc/open/getPublicationRank?secretKey=${encodeURIComponent(secretKey)}&publicationName=${encodeURIComponent(venue)}`;
+  await respectEasyScholarRateLimit();
+  const url = `https://www.easyscholar.cc/open/getPublicationRank?secretKey=${encodeURIComponent(secretKey)}&publicationName=${encodeURIComponent(venue)}`;
   const response = await Zotero.HTTP.request("GET", url, {
     responseType: "json",
     timeout: 30000,
   });
   const body = response.response as EasyScholarResponse;
-  const rank = body.data?.officialRank?.all;
-  if (!rank)
+  if (body.code !== 200 || !body.data)
     throw new Error(body.msg || "EasyScholar 未返回该期刊或会议的信息");
+  const rank = body.data.officialRank?.all ?? {};
 
-  const lines = EASY_SCHOLAR_FIELDS.filter(([key]) => selected.includes(key))
+  const lines = EASY_SCHOLAR_FIELDS.filter(
+    ([key]) => key !== "customRank" && selected.includes(key),
+  )
     .map(([key, label]) => {
       const value = rank[key];
       return value === undefined || value === null || value === ""
@@ -110,6 +172,11 @@ export async function updateEasyScholarItem(
         : `${label}: ${Array.isArray(value) ? value.join("；") : String(value)}`;
     })
     .filter((line): line is string => Boolean(line));
+  if (selected.includes("customRank")) {
+    const customRanks = formatCustomRanks(body);
+    if (customRanks.length)
+      lines.push(`自定义数据集: ${customRanks.join("；")}`);
+  }
   if (!lines.length) return false;
   const block = `${BLOCK_START}\n${lines.join("\n")}\n${BLOCK_END}`;
   const extra = String(item.getField("extra") || "").trim();
