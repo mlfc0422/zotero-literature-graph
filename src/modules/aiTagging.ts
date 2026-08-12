@@ -10,7 +10,21 @@ export interface AiTagSettings {
   prompt: string;
 }
 
-const DEFAULT_PROMPT = `Generate concise English academic tags for the paper below. Focus on research topic, method, and object. Avoid generic words, sentences, duplicates, and explanations. Return JSON only: {"tags":["tag"]}.`;
+const DEFAULT_PROMPT = `Generate concise academic topic tags for the paper below.
+
+Tags should describe the main research areas, problems, and reusable methodological directions of the paper, so that related papers can be connected through shared tags in a knowledge graph.
+
+Rules:
+
+- Each tag should contain 1–3 words only
+- Use concise PascalCase labels, e.g., "TransferLearning", "DomainAdaptation", "SampleSelectionBias"
+- Include both broad research areas and more specific research topics when relevant
+- Prefer established academic concepts and commonly used research terms
+- Include important problem-oriented or methodological topics if they are reusable across multiple papers
+- Avoid paper-specific algorithm names, model names, dataset names, and narrow application scenarios
+- Avoid overly generic tags that provide little information
+- Use consistent terminology across papers: prefer the same tag for the same research concept
+- Output JSON only: {"tags": ["tag1", "tag2", ...]}`;
 
 export function getAiTagSettings(): AiTagSettings {
   const get = (key: string, fallback: string) =>

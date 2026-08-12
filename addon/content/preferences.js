@@ -47,14 +47,22 @@ var ZoteroPulsPreferences = {
       Zotero.Prefs.get(`${this.prefix}prompt`, true) || this.prompt;
     root.dataset.provider = provider.value;
     provider.addEventListener("change", () => {
-      this.persistApiKey(root.dataset.provider);
+      Zotero.Prefs.set(`${this.prefix}provider`, provider.value, true);
       this.updatePackage();
     });
     this.get("api-key").addEventListener("input", () => this.persistApiKey());
+    this.get("model").addEventListener("change", () => this.persistModel());
+    this.get("tag-count").addEventListener("input", () =>
+      this.persistTagCount(),
+    );
+    this.get("tag-count").addEventListener("change", () =>
+      this.persistTagCount(),
+    );
+    this.get("prompt").addEventListener("input", () => this.persistPrompt());
+    this.get("prompt").addEventListener("change", () => this.persistPrompt());
     this.get("fetch-models").addEventListener("click", () =>
       this.fetchOpenAIModels(),
     );
-    this.get("save").addEventListener("click", () => this.save());
     this.updatePackage();
   },
   persistApiKey(provider) {
@@ -68,6 +76,24 @@ var ZoteroPulsPreferences = {
         this.get("api-key").value.trim(),
         true,
       );
+  },
+  persistTagCount() {
+    const input = this.get("tag-count");
+    const value = Math.max(1, Math.min(20, Number(input.value) || 5));
+    input.value = value;
+    Zotero.Prefs.set(`${this.prefix}tagCount`, value, true);
+  },
+  persistModel() {
+    const provider = this.get("provider").value;
+    const model = this.get("model").value;
+    if (model) Zotero.Prefs.set(`${this.prefix}${provider}Model`, model, true);
+  },
+  persistPrompt() {
+    Zotero.Prefs.set(
+      `${this.prefix}prompt`,
+      this.get("prompt").value.trim() || this.prompt,
+      true,
+    );
   },
   updatePackage() {
     const provider = this.get("provider").value;
@@ -154,25 +180,6 @@ var ZoteroPulsPreferences = {
       button.disabled = false;
       button.textContent = "\u83b7\u53d6\u53ef\u7528\u6a21\u578b";
     }
-  },
-  save() {
-    const provider = this.get("provider").value;
-    const model = this.get("model").value;
-    if (!model)
-      return alert("\u8bf7\u5148\u9009\u62e9\u4e00\u4e2a\u6a21\u578b\u3002");
-    this.persistApiKey(provider);
-    Zotero.Prefs.set(`${this.prefix}provider`, provider, true);
-    Zotero.Prefs.set(`${this.prefix}${provider}Model`, model, true);
-    Zotero.Prefs.set(
-      `${this.prefix}tagCount`,
-      Math.max(1, Math.min(20, Number(this.get("tag-count").value) || 5)),
-      true,
-    );
-    Zotero.Prefs.set(
-      `${this.prefix}prompt`,
-      this.get("prompt").value.trim() || this.prompt,
-      true,
-    );
   },
 };
 window.ZoteroPulsPreferences = ZoteroPulsPreferences;
