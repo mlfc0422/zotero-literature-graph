@@ -12,19 +12,27 @@ export interface AiTagSettings {
 
 const DEFAULT_PROMPT = `Generate concise academic topic tags for the paper below.
 
-Tags should describe the main research areas, problems, and reusable methodological directions of the paper, so that related papers can be connected through shared tags in a knowledge graph.
+The tags will be used to connect related papers in a knowledge graph. Tags should capture the paper's main research areas, research problems, and reusable methodological directions.
 
 Rules:
+* Each tag should contain 1–3 meaningful words only.
+* Use normal spaces between words in multi-word tags.
+* Do not use PascalCase, camelCase, underscores, or unnecessary hyphens.
+* Avoid articles, prepositions, and other unnecessary function words.
+* Prefer established academic concepts and commonly used research terminology.
+* Include both broader research areas and more specific topics when relevant.
+* Include reusable methodological directions when they are central to the paper.
+* Established application-oriented research fields are allowed.
+* Avoid overly specific application scenarios, dataset names, benchmark names, and experimental settings.
+* Avoid paper-specific algorithm names, model names, and terminology that is not broadly reusable.
+* Avoid overly generic tags that provide little information.
+* Avoid multiple near-synonymous tags for the same concept.
+* Use consistent terminology across papers: the same concept should preferably receive the same tag.
+* Prefer tags that could reasonably be shared by multiple related papers.
+* Order tags roughly from broader research area to more specific topic or methodological direction.
 
-- Each tag should contain 1–3 words only
-- Use concise PascalCase labels, e.g., "TransferLearning", "DomainAdaptation", "SampleSelectionBias"
-- Include both broad research areas and more specific research topics when relevant
-- Prefer established academic concepts and commonly used research terms
-- Include important problem-oriented or methodological topics if they are reusable across multiple papers
-- Avoid paper-specific algorithm names, model names, dataset names, and narrow application scenarios
-- Avoid overly generic tags that provide little information
-- Use consistent terminology across papers: prefer the same tag for the same research concept
-- Output JSON only: {"tags": ["tag1", "tag2", ...]}`;
+Output JSON only, with no explanation or additional text:
+{"tags": ["tag1", "tag2", "tag3"]}`;
 
 export function getAiTagSettings(): AiTagSettings {
   const get = (key: string, fallback: string) =>
@@ -103,7 +111,7 @@ export async function generateAiTags(item: Zotero.Item): Promise<string[]> {
             { role: "developer", content: settings.prompt },
             {
               role: "user",
-              content: `Generate exactly ${settings.tagCount} English tags.\n\nTitle: ${title}\n\nAbstract: ${abstract}`,
+              content: `Generate up to ${settings.tagCount} tags. Do not add filler tags just to reach this limit.\n\nPaper:\nTitle: ${title}\n\nAbstract: ${abstract}`,
             },
           ],
           text: {
@@ -129,7 +137,7 @@ export async function generateAiTags(item: Zotero.Item): Promise<string[]> {
             { role: "system", content: settings.prompt },
             {
               role: "user",
-              content: `Generate exactly ${settings.tagCount} English tags.\n\nTitle: ${title}\n\nAbstract: ${abstract}`,
+              content: `Generate up to ${settings.tagCount} tags. Do not add filler tags just to reach this limit.\n\nPaper:\nTitle: ${title}\n\nAbstract: ${abstract}`,
             },
           ],
           response_format: { type: "json_object" },

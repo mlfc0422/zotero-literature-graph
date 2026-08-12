@@ -13,8 +13,29 @@ var ZoteroPulsPreferences = {
     },
   },
   deepseekModels: ["deepseek-v4-flash", "deepseek-v4-pro"],
-  prompt:
-    'Generate concise English academic tags for the paper below. Focus on research topic, method, and object. Avoid generic words, sentences, duplicates, and explanations. Return JSON only: {"tags":["tag"]}.',
+  prompt: `Generate concise academic topic tags for the paper below.
+
+The tags will be used to connect related papers in a knowledge graph. Tags should capture the paper's main research areas, research problems, and reusable methodological directions.
+
+Rules:
+* Each tag should contain 1–3 meaningful words only.
+* Use normal spaces between words in multi-word tags.
+* Do not use PascalCase, camelCase, underscores, or unnecessary hyphens.
+* Avoid articles, prepositions, and other unnecessary function words.
+* Prefer established academic concepts and commonly used research terminology.
+* Include both broader research areas and more specific topics when relevant.
+* Include reusable methodological directions when they are central to the paper.
+* Established application-oriented research fields are allowed.
+* Avoid overly specific application scenarios, dataset names, benchmark names, and experimental settings.
+* Avoid paper-specific algorithm names, model names, and terminology that is not broadly reusable.
+* Avoid overly generic tags that provide little information.
+* Avoid multiple near-synonymous tags for the same concept.
+* Use consistent terminology across papers: the same concept should preferably receive the same tag.
+* Prefer tags that could reasonably be shared by multiple related papers.
+* Order tags roughly from broader research area to more specific topic or methodological direction.
+
+Output JSON only, with no explanation or additional text:
+{"tags": ["tag1", "tag2", "tag3"]}`,
   get(id) {
     return document.getElementById(`zotero-puls-ai-${id}`);
   },
