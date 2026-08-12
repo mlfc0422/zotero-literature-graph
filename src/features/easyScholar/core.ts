@@ -132,5 +132,31 @@ export function extractEasyScholarSummary(extra: string): string {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean)
+    .map((line) => {
+      const separator = line.indexOf(":");
+      return separator >= 0 ? line.slice(separator + 1).trim() : line;
+    })
     .join(" | ");
+}
+
+export type EasyScholarRankTier = 0 | 1 | 2 | 3 | 4;
+
+export function classifyEasyScholarValue(value: string): EasyScholarRankTier {
+  const normalized = value.trim().toUpperCase();
+  if (
+    /\bTOP\b|\bQ1\b|(?:^|\D)1\s*区|\bA\+{0,2}\b|\bA\*\b|\bAA\b/.test(normalized)
+  )
+    return 1;
+  if (/\bQ2\b|(?:^|\D)2\s*区|\bB\+?\b/.test(normalized)) return 2;
+  if (/\bQ3\b|(?:^|\D)3\s*区|\bC\+?\b/.test(normalized)) return 3;
+  if (/\bQ4\b|(?:^|\D)4\s*区|\bD\b/.test(normalized)) return 4;
+  const numeric = normalized.match(/^\d+(?:\.\d+)?$/);
+  if (numeric) {
+    const score = Number(numeric[0]);
+    if (score >= 10) return 1;
+    if (score >= 5) return 2;
+    if (score >= 2) return 3;
+    return 4;
+  }
+  return 0;
 }

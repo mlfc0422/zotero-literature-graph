@@ -3,7 +3,11 @@ import {
   isEasyScholarConfigured,
   updateEasyScholarItem,
 } from "../../modules/easyScholar";
-import { extractEasyScholarSummary } from "./core";
+import {
+  classifyEasyScholarValue,
+  extractEasyScholarSummary,
+  type EasyScholarRankTier,
+} from "./core";
 
 const EASY_SCHOLAR_MENU_ID = "zotero-puls-easyscholar-menuitem";
 let notifierID: string | undefined;
@@ -23,9 +27,44 @@ export function registerEasyScholarColumn(): void {
       item.isRegularItem()
         ? extractEasyScholarSummary(String(item.getField("extra") || ""))
         : "",
+    renderCell: (_index, data, column, _isFirstColumn, doc) =>
+      renderRankCell(data, column.className, doc),
     zoteroPersist: ["width", "hidden", "sortDirection"],
   });
   if (registered) columnDataKey = registered;
+}
+
+const RANK_COLORS: Record<
+  EasyScholarRankTier,
+  { foreground: string; background: string; border: string }
+> = {
+  0: { foreground: "#475467", background: "#f2f4f7", border: "#d0d5dd" },
+  1: { foreground: "#b42318", background: "#fef3f2", border: "#fecdca" },
+  2: { foreground: "#6938a7", background: "#f9f5ff", border: "#e9d7fe" },
+  3: { foreground: "#175cd3", background: "#eff8ff", border: "#b2ddff" },
+  4: { foreground: "#067647", background: "#ecfdf3", border: "#abefc6" },
+};
+
+function renderRankCell(
+  data: string,
+  className: string,
+  doc: Document,
+): HTMLElement {
+  const cell = doc.createElement("span");
+  cell.className = `cell ${className}`;
+  cell.style.display = "flex";
+  cell.style.alignItems = "center";
+  cell.style.gap = "4px";
+  cell.style.overflow = "hidden";
+  cell.title = data;
+  for (const value of data.split(" | ").filter(Boolean)) {
+    const colors = RANK_COLORS[classifyEasyScholarValue(value)];
+    const badge = doc.createElement("span");
+    badge.textContent = value;
+    badge.style.cssText = `display:inline-block;flex:0 0 auto;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:1px 6px;border-radius:999px;font-size:0.92em;font-weight:600;color:${colors.foreground};background:${colors.background};border:1px solid ${colors.border}`;
+    cell.appendChild(badge);
+  }
+  return cell;
 }
 
 export function registerEasyScholarFeature(win: _ZoteroTypes.MainWindow): void {
