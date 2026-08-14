@@ -5,17 +5,17 @@
   "description": "Visualize author-tag relationships in Zotero collections",
   "config": {
     "addonName": "Zotero Puls",
-    "addonID": "zotero-puls@local",
+    "addonID": "zotero-puls@mlfc0422.github.io",
     "addonRef": "zoteropuls",
     "addonInstance": "ZoteroPuls",
     "prefsPrefix": "extensions.zotero.zoteropuls"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/mlfc0422/zotero-literature-graph.git"
+    "url": "https://github.com/mlfc0422/zotero-puls.git"
   },
   "author": "Ricardo",
-  "homepage": "https://github.com/mlfc0422/zotero-literature-graph",
+  "homepage": "https://github.com/mlfc0422/zotero-puls",
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "start": "zotero-plugin serve",
