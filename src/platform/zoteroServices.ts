@@ -37,3 +37,7 @@ export const zoteroPreferenceStore: PreferenceStore = {
     Zotero.Prefs.set(key, value, true);
   },
 };
+
+export function zoteroMd5(value: string): string {
+  return Zotero.Utilities.Internal.md5(value, false);
+}

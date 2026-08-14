@@ -7,7 +7,9 @@
     <![CDATA[ #zotero-puls-preferences { padding: 8px 10px 14px; }
     #zotero-puls-preferences groupbox { margin: 0 0 12px; } .puls-form-grid {
     display: grid; grid-template-columns: minmax(92px, 116px) minmax(260px,
-    1fr); gap: 10px 14px; align-items: center; max-width: 720px; } .puls-field {
+    1fr); gap: 10px 14px; align-items: center; max-width: 720px; }
+    .puls-form-grid > .puls-form-grid { grid-column: 1 / -1; width: 100%; }
+    .puls-form-grid [hidden] { display: none !important; } .puls-field {
     display: contents; } .puls-field-label { color: #4b5563; font-weight: 600;
     text-align: right; } .puls-form-grid input[type="password"], .puls-form-grid
     select { box-sizing: border-box; min-width: 0; width: 100%; }
@@ -118,28 +120,15 @@
           max="20"
         />
       </html:label>
+    </html:div>
+  </groupbox>
+  <groupbox>
+    <label><html:strong>PDF &#32763;&#35793;</html:strong></label>
+    <html:div class="puls-form-grid">
       <html:label class="puls-checkbox-field">
         <html:input id="zotero-puls-ai-pdf-auto-translate" type="checkbox" />
         PDF
-        &#36873;&#21306;&#21518;&#33258;&#21160;&#26174;&#31034;&#20013;&#25991;&#32763;&#35793;
-      </html:label>
-      <html:label class="puls-field">
-        <html:span class="puls-field-label"
-          >&#32763;&#35793;&#26381;&#21153;</html:span
-        >
-        <html:select id="zotero-puls-ai-translate-provider">
-          <html:option value="google-free"
-            >Google Translate&#65288;&#20813;&#36153;&#65292;&#26080;&#38656;
-            Key&#65289;</html:option
-          >
-          <html:option value="google-cloud"
-            >Google Cloud
-            &#32763;&#35793;&#65288;&#26377;&#20813;&#36153;&#26376;&#24230;&#39069;&#24230;&#65289;</html:option
-          >
-          <html:option value="ai"
-            >AI &#26381;&#21153;&#65288;DeepSeek / OpenAI&#65289;</html:option
-          >
-        </html:select>
+        &#36873;&#21306;&#21518;&#33258;&#21160;&#26174;&#31034;&#32763;&#35793;
       </html:label>
       <html:label class="puls-field">
         <html:span class="puls-field-label"
@@ -153,34 +142,43 @@
           <html:option value="ja">&#26085;&#26412;&#35486;</html:option>
         </html:select>
       </html:label>
-      <html:label class="puls-field">
-        <html:span class="puls-field-label"
-          >&#22833;&#36133;&#22238;&#36864;</html:span
-        >
-        <html:select id="zotero-puls-ai-translate-fallback">
-          <html:option value="none">&#19981;&#22238;&#36864;</html:option>
-          <html:option value="google-free"
-            >Google Translate&#65288;&#20813;&#36153;&#65289;</html:option
-          >
-          <html:option value="google-cloud"
-            >Google Cloud &#32763;&#35793;</html:option
-          >
-          <html:option value="ai">AI &#26381;&#21153;</html:option>
-        </html:select>
-      </html:label>
-      <html:label class="puls-field">
-        <html:span class="puls-field-label">Google API Key</html:span>
+      <html:label class="puls-checkbox-field">
         <html:input
-          id="zotero-puls-ai-google-translate-api-key"
-          type="password"
+          id="zotero-puls-ai-translate-google-free-enabled"
+          type="checkbox"
         />
+        &#21551;&#29992; Google Translate
+      </html:label>
+      <html:label class="puls-checkbox-field">
+        <html:input
+          id="zotero-puls-ai-translate-huoshan-web-enabled"
+          type="checkbox"
+        />
+        &#21551;&#29992; &#28779;&#23665;&#32593;&#39029;&#32763;&#35793;
+      </html:label>
+      <html:label class="puls-checkbox-field">
+        <html:input
+          id="zotero-puls-ai-translate-tencent-transmart-enabled"
+          type="checkbox"
+        />
+        &#21551;&#29992; &#33150;&#35759; Transmart
+      </html:label>
+      <html:label class="puls-checkbox-field">
+        <html:input
+          id="zotero-puls-ai-translate-cnki-enabled"
+          type="checkbox"
+        />
+        &#21551;&#29992; &#30693;&#32593;&#32763;&#35793;
+      </html:label>
+      <html:label class="puls-checkbox-field">
+        <html:input
+          id="zotero-puls-ai-translate-iciba-enabled"
+          type="checkbox"
+        />
+        &#21551;&#29992; &#29233;&#35789;&#38712;&#32763;&#35793;
       </html:label>
       <html:span class="puls-package-description"
-        >Google Translate &#26080;&#38656;
-        Key&#65292;&#20351;&#29992;&#32593;&#39029;&#31471;&#25509;&#21475;&#65292;&#21487;&#33021;&#38543;&#22806;&#37096;&#26381;&#21153;&#35843;&#25972;&#32780;&#21464;&#21270;&#12290;&#20351;&#29992;
-        Google Cloud &#32763;&#35793;&#26102;&#22635;&#20889;
-        Key&#65292;&#24182;&#21551;&#29992; Cloud Translation
-        API&#12290;</html:span
+        >&#21487;&#21516;&#26102;&#21551;&#29992;&#22810;&#20010;&#26381;&#21153;&#65292;&#25554;&#20214;&#20250;&#25353;&#39029;&#38754;&#39034;&#24207;&#20381;&#27425;&#23581;&#35797;&#12290;&#36825;&#20123;&#26381;&#21153;&#20351;&#29992;&#21508;&#24179;&#21488;&#30340;&#20844;&#24320;&#32593;&#39029;&#25509;&#21475;&#65292;&#21487;&#33021;&#22240;&#26381;&#21153;&#35843;&#25972;&#32780;&#22833;&#25928;&#12290;</html:span
       >
     </html:div>
   </groupbox>

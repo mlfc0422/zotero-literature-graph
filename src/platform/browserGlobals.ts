@@ -34,3 +34,21 @@ export function installBrowserGlobals(win: Window): void {
   const sandbox = _globalThis as Record<string, unknown>;
   for (const [key, value] of Object.entries(values)) sandbox[key] = value;
 }
+
+export function getBrowserCrypto(): Crypto {
+  const crypto = Zotero.getMainWindow()?.crypto;
+  if (!crypto) throw new Error("Browser crypto is unavailable");
+  return crypto;
+}
+
+export function encodeBrowserBase64(bytes: Uint8Array): string {
+  const encode = Zotero.getMainWindow()?.btoa;
+  if (!encode) throw new Error("Browser base64 encoder is unavailable");
+  return encode(String.fromCharCode(...bytes));
+}
+
+export function decodeBrowserBase64(value: string): Uint8Array {
+  const decode = Zotero.getMainWindow()?.atob;
+  if (!decode) throw new Error("Browser base64 decoder is unavailable");
+  return Uint8Array.from(decode(value), (character) => character.charCodeAt(0));
+}
