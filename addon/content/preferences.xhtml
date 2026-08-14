@@ -118,6 +118,70 @@
           max="20"
         />
       </html:label>
+      <html:label class="puls-checkbox-field">
+        <html:input id="zotero-puls-ai-pdf-auto-translate" type="checkbox" />
+        PDF
+        &#36873;&#21306;&#21518;&#33258;&#21160;&#26174;&#31034;&#20013;&#25991;&#32763;&#35793;
+      </html:label>
+      <html:label class="puls-field">
+        <html:span class="puls-field-label"
+          >&#32763;&#35793;&#26381;&#21153;</html:span
+        >
+        <html:select id="zotero-puls-ai-translate-provider">
+          <html:option value="google-free"
+            >Google Translate&#65288;&#20813;&#36153;&#65292;&#26080;&#38656;
+            Key&#65289;</html:option
+          >
+          <html:option value="google-cloud"
+            >Google Cloud
+            &#32763;&#35793;&#65288;&#26377;&#20813;&#36153;&#26376;&#24230;&#39069;&#24230;&#65289;</html:option
+          >
+          <html:option value="ai"
+            >AI &#26381;&#21153;&#65288;DeepSeek / OpenAI&#65289;</html:option
+          >
+        </html:select>
+      </html:label>
+      <html:label class="puls-field">
+        <html:span class="puls-field-label"
+          >&#30446;&#26631;&#35821;&#35328;</html:span
+        >
+        <html:select id="zotero-puls-ai-translate-target-language">
+          <html:option value="zh-CN"
+            >&#20013;&#25991;&#65288;&#31616;&#20307;&#65289;</html:option
+          >
+          <html:option value="en">English</html:option>
+          <html:option value="ja">&#26085;&#26412;&#35486;</html:option>
+        </html:select>
+      </html:label>
+      <html:label class="puls-field">
+        <html:span class="puls-field-label"
+          >&#22833;&#36133;&#22238;&#36864;</html:span
+        >
+        <html:select id="zotero-puls-ai-translate-fallback">
+          <html:option value="none">&#19981;&#22238;&#36864;</html:option>
+          <html:option value="google-free"
+            >Google Translate&#65288;&#20813;&#36153;&#65289;</html:option
+          >
+          <html:option value="google-cloud"
+            >Google Cloud &#32763;&#35793;</html:option
+          >
+          <html:option value="ai">AI &#26381;&#21153;</html:option>
+        </html:select>
+      </html:label>
+      <html:label class="puls-field">
+        <html:span class="puls-field-label">Google API Key</html:span>
+        <html:input
+          id="zotero-puls-ai-google-translate-api-key"
+          type="password"
+        />
+      </html:label>
+      <html:span class="puls-package-description"
+        >Google Translate &#26080;&#38656;
+        Key&#65292;&#20351;&#29992;&#32593;&#39029;&#31471;&#25509;&#21475;&#65292;&#21487;&#33021;&#38543;&#22806;&#37096;&#26381;&#21153;&#35843;&#25972;&#32780;&#21464;&#21270;&#12290;&#20351;&#29992;
+        Google Cloud &#32763;&#35793;&#26102;&#22635;&#20889;
+        Key&#65292;&#24182;&#21551;&#29992; Cloud Translation
+        API&#12290;</html:span
+      >
     </html:div>
   </groupbox>
   <groupbox>

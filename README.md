@@ -112,6 +112,10 @@ DeepSeek 使用预设模型列表；OpenAI 可通过“获取可用模型”读�
 
 AGPL-3.0-or-later
 
+## PDF 选区自动翻译
+
+在 Zotero 内置 PDF 阅读器中选中文本后，原有的颜色、高亮和下划线菜单会照常显示，菜单下方会自动出现译文。可在“设置 → Zotero Puls”中关闭自动翻译，并选择目标语言、翻译服务和失败回退服务。默认的 Google Translate 不需要 API Key，但使用网页端接口，稳定性会受外部服务调整影响；Google Cloud Translation 需要自行配置 API Key 并启用 Cloud Translation API；DeepSeek 与 OpenAI 则复用 AI 标签服务的配置。译文仅显示，不会自动写入批注或笔记。
+
 ## 分类论文数量
 
 左侧普通分类名称后会显示该分类直接包含的论文数量。计数不包含附件、笔记和子分类中的论文；拖动侧栏滚动、创建或删除分类、以及将论文加入或移出分类后会自动更新。

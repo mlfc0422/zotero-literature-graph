@@ -219,6 +219,11 @@ Output JSON only, with no explanation or additional text:
       "api-key",
       "model",
       "tag-count",
+      "pdf-auto-translate",
+      "translate-provider",
+      "translate-target-language",
+      "translate-fallback",
+      "google-translate-api-key",
       "prompt",
       "fetch-models",
     ];
@@ -251,6 +256,25 @@ Output JSON only, with no explanation or additional text:
     }
     this.get("tag-count").value =
       Zotero.Prefs.get(`${this.prefix}tagCount`, true) || 5;
+    this.get("pdf-auto-translate").checked =
+      Zotero.Prefs.get(`${this.prefix}pdfAutoTranslate`, true) !== false;
+    const savedTranslateProvider = Zotero.Prefs.get(
+      `${this.prefix}translateProvider`,
+      true,
+    );
+    this.get("translate-provider").value =
+      savedTranslateProvider === "google"
+        ? "google-cloud"
+        : this.normalizeTranslateProvider(savedTranslateProvider);
+    this.get("translate-target-language").value =
+      this.normalizeTranslateTargetLanguage(
+        Zotero.Prefs.get(`${this.prefix}translateTargetLanguage`, true),
+      );
+    this.get("translate-fallback").value = this.normalizeTranslateFallback(
+      Zotero.Prefs.get(`${this.prefix}translateFallback`, true),
+    );
+    this.get("google-translate-api-key").value =
+      Zotero.Prefs.get(`${this.prefix}googleTranslateApiKey`, true) || "";
     this.get("prompt").value =
       Zotero.Prefs.get(`${this.prefix}prompt`, true) || this.prompt;
     root.dataset.provider = provider.value;
@@ -270,6 +294,23 @@ Output JSON only, with no explanation or additional text:
     );
     this.get("tag-count").addEventListener("blur", () =>
       this.persistTagCount(),
+    );
+    this.get("pdf-auto-translate").addEventListener("change", () =>
+      this.persistPdfAutoTranslate(),
+    );
+    this.get("translate-provider").addEventListener("change", () =>
+      this.persistTranslateProvider(),
+    );
+    this.get("translate-target-language").addEventListener("change", () =>
+      this.persistTranslateTargetLanguage(),
+    );
+    this.get("translate-fallback").addEventListener("change", () =>
+      this.persistTranslateFallback(),
+    );
+    ["input", "change", "blur"].forEach((event) =>
+      this.get("google-translate-api-key").addEventListener(event, () =>
+        this.persistGoogleTranslateApiKey(),
+      ),
     );
     this.get("prompt").addEventListener("input", () => this.persistPrompt());
     this.get("prompt").addEventListener("change", () => this.persistPrompt());
@@ -462,6 +503,51 @@ Output JSON only, with no explanation or additional text:
     const value = Math.max(1, Math.min(20, Number(input.value) || 5));
     input.value = value;
     Zotero.Prefs.set(`${this.prefix}tagCount`, value, true);
+  },
+  persistPdfAutoTranslate() {
+    Zotero.Prefs.set(
+      `${this.prefix}pdfAutoTranslate`,
+      this.get("pdf-auto-translate").checked,
+      true,
+    );
+  },
+  persistTranslateProvider() {
+    const select = this.get("translate-provider");
+    const provider = this.normalizeTranslateProvider(select.value);
+    select.value = provider;
+    Zotero.Prefs.set(`${this.prefix}translateProvider`, provider, true);
+  },
+  normalizeTranslateProvider(value) {
+    return ["google-free", "google-cloud", "ai"].includes(value)
+      ? value
+      : "google-free";
+  },
+  normalizeTranslateTargetLanguage(value) {
+    return ["zh-CN", "en", "ja"].includes(value) ? value : "zh-CN";
+  },
+  normalizeTranslateFallback(value) {
+    return ["none", "google-free", "google-cloud", "ai"].includes(value)
+      ? value
+      : "none";
+  },
+  persistTranslateTargetLanguage() {
+    const select = this.get("translate-target-language");
+    const language = this.normalizeTranslateTargetLanguage(select.value);
+    select.value = language;
+    Zotero.Prefs.set(`${this.prefix}translateTargetLanguage`, language, true);
+  },
+  persistTranslateFallback() {
+    const select = this.get("translate-fallback");
+    const fallback = this.normalizeTranslateFallback(select.value);
+    select.value = fallback;
+    Zotero.Prefs.set(`${this.prefix}translateFallback`, fallback, true);
+  },
+  persistGoogleTranslateApiKey() {
+    Zotero.Prefs.set(
+      `${this.prefix}googleTranslateApiKey`,
+      this.get("google-translate-api-key").value.trim(),
+      true,
+    );
   },
   persistModel() {
     const provider = this.normalizeProvider(this.get("provider").value);

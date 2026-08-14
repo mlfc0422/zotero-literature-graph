@@ -29,6 +29,10 @@ import {
   shutdownCollectionCountFeature,
   unregisterCollectionCountFeature,
 } from "./features/collectionCounts/register";
+import {
+  registerPdfTranslateFeature,
+  unregisterPdfTranslateFeature,
+} from "./features/pdfTranslate/register";
 
 async function onStartup(): Promise<void> {
   await Promise.all([
@@ -43,6 +47,7 @@ async function onStartup(): Promise<void> {
   registerEasyScholarColumn();
   registerEasyScholarNotifier();
   registerCollectionCountNotifier();
+  registerPdfTranslateFeature();
   addon.data.initialized = true;
 }
 
@@ -67,6 +72,7 @@ function onShutdown(): void {
   shutdownGraphFeature();
   shutdownEasyScholarFeature();
   shutdownCollectionCountFeature();
+  unregisterPdfTranslateFeature();
   for (const win of Zotero.getMainWindows()) void onMainWindowUnload(win);
   ztoolkit.unregisterAll();
   addon.data.alive = false;
