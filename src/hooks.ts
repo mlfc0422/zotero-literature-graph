@@ -23,6 +23,12 @@ import {
   unregisterPublicationResolverFeature,
 } from "./features/publicationResolver/register";
 import { findPublishedVersion } from "./modules/publicationResolver";
+import {
+  registerCollectionCountFeature,
+  registerCollectionCountNotifier,
+  shutdownCollectionCountFeature,
+  unregisterCollectionCountFeature,
+} from "./features/collectionCounts/register";
 
 async function onStartup(): Promise<void> {
   await Promise.all([
@@ -36,6 +42,7 @@ async function onStartup(): Promise<void> {
   await registerPreferencesPane();
   registerEasyScholarColumn();
   registerEasyScholarNotifier();
+  registerCollectionCountNotifier();
   addon.data.initialized = true;
 }
 
@@ -45,6 +52,7 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
   registerAiTagFeature(win);
   registerEasyScholarFeature(win);
   registerPublicationResolverFeature(win);
+  registerCollectionCountFeature(win);
 }
 
 async function onMainWindowUnload(win: Window): Promise<void> {
@@ -52,11 +60,13 @@ async function onMainWindowUnload(win: Window): Promise<void> {
   unregisterAiTagFeature(win);
   unregisterEasyScholarFeature(win);
   unregisterPublicationResolverFeature(win);
+  unregisterCollectionCountFeature(win);
 }
 
 function onShutdown(): void {
   shutdownGraphFeature();
   shutdownEasyScholarFeature();
+  shutdownCollectionCountFeature();
   for (const win of Zotero.getMainWindows()) void onMainWindowUnload(win);
   ztoolkit.unregisterAll();
   addon.data.alive = false;
