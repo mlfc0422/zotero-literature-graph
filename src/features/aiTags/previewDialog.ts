@@ -1,8 +1,8 @@
 import { normalizeTags } from "./core";
 
 export async function previewAiTags(
-  sourceWin: Window,
   suggestedTags: string[],
+  manualTagCount: number,
 ): Promise<string[] | undefined> {
   return new Promise((resolve) => {
     const dialogData: Record<string, unknown> = {};
@@ -13,7 +13,20 @@ export async function previewAiTags(
         id: "zotero-puls-ai-preview",
       })
       .addButton("取消", "cancel")
-      .addButton("应用标签", "apply")
+      .addButton("应用标签", "apply", {
+        noClose: true,
+        callback: () => {
+          const dialogWin = dialog.window;
+          if (
+            dialogWin.confirm(
+              `将替换该论文的 ${manualTagCount} 个手动标签。自动标签不会受到影响。是否继续？`,
+            )
+          ) {
+            dialogData.applyConfirmed = true;
+            dialogWin.close();
+          }
+        },
+      })
       .setDialogData(dialogData);
     const collect = () => {
       const doc = dialog.window.document;
@@ -52,7 +65,7 @@ export async function previewAiTags(
       host.appendChild(extra);
     };
     dialogData.beforeUnloadCallback = () => {
-      resolve(dialogData._lastButtonId === "apply" ? collect() : undefined);
+      resolve(dialogData.applyConfirmed ? collect() : undefined);
     };
     dialog.open("AI 标签预览", {
       width: 480,
@@ -62,6 +75,5 @@ export async function previewAiTags(
       fitContent: false,
       noDialogMode: true,
     });
-    sourceWin.focus();
   });
 }

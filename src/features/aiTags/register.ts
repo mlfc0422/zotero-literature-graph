@@ -32,15 +32,9 @@ async function runAiTagging(win: _ZoteroTypes.MainWindow): Promise<void> {
   if (!item?.isRegularItem()) return;
   try {
     const suggested = await generateAiTags(item);
-    const tags = await previewAiTags(win, suggested);
-    if (!tags?.length) return;
     const manualCount = item.getTags().filter((tag) => tag.type !== 1).length;
-    if (
-      !win.confirm(
-        `将替换该论文的 ${manualCount} 个手动标签。自动标签不会受到影响。是否继续？`,
-      )
-    )
-      return;
+    const tags = await previewAiTags(suggested, manualCount);
+    if (!tags?.length) return;
     await replaceManualTags(item, tags);
   } catch (error) {
     reportPluginError(error, {
