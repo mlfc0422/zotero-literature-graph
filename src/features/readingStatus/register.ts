@@ -1,5 +1,11 @@
-import { formatReadAt } from "./core";
 import {
+  formatReadAt,
+  formatReadAtShort,
+  formatReadingDuration,
+  type ReadingStatus,
+} from "./core";
+import {
+  addReadingSeconds,
   getReadingStatus,
   getReadingStatusItem,
   setReadingStatus,
@@ -9,9 +15,13 @@ import { reportPluginError } from "../../platform/errorReporter";
 const MENU_ID = "zotero-puls-reading-status-menuitem";
 const READER_EVENT = "renderToolbar";
 const READER_BUTTON_ATTRIBUTE = "data-zotero-puls-reading-item";
+const READING_IDLE_MS = 90_000;
+const READING_TICK_MS = 15_000;
+const READING_FLUSH_SECONDS = 60;
 let readerRegistered = false;
 const readerDocumentListeners = new WeakSet<Document>();
 const savingReadingItems = new Set<number>();
+let readingTimer: ReturnType<typeof setInterval> | undefined;
 
 interface ReadingRowState {
   observer?: MutationObserver;
@@ -24,8 +34,24 @@ interface ReadingMenuState {
   onPopupShowing: EventListener;
 }
 
+interface ReaderTimingSession {
+  readerID: string;
+  target: Zotero.Item;
+  doc: Document;
+  lastActivityAt: number;
+  focused: boolean;
+}
+
+interface ReadingDurationBuffer {
+  target: Zotero.Item;
+  lastTickAt: number;
+  pendingSeconds: number;
+}
+
 const readingRowStates = new Map<Window, ReadingRowState>();
 const readingMenuStates = new Map<Window, ReadingMenuState>();
+const readerTimingSessions = new Map<string, ReaderTimingSession>();
+const readingDurationBuffers = new Map<number, ReadingDurationBuffer>();
 
 export function registerReadingStatusFeature(
   win: _ZoteroTypes.MainWindow,
@@ -69,6 +95,12 @@ export function shutdownReadingStatusFeature(): void {
     state.popup.removeEventListener("popupshowing", state.onPopupShowing);
   }
   readingMenuStates.clear();
+  if (readingTimer) clearInterval(readingTimer);
+  readingTimer = undefined;
+  for (const itemID of readingDurationBuffers.keys())
+    void flushReadingDuration(itemID);
+  readerTimingSessions.clear();
+  readingDurationBuffers.clear();
   savingReadingItems.clear();
 }
 
@@ -82,6 +114,7 @@ function onReaderToolbar(
   const target = getReadingStatusItem(readerItem);
   if (!target) return;
   ensureReaderDocumentListeners(event.doc);
+  registerReaderTimingSession(event.reader._instanceID, target, event.doc);
   const button = event.doc.createElement("button");
   button.type = "button";
   button.setAttribute(READER_BUTTON_ATTRIBUTE, String(target.id));
@@ -114,9 +147,124 @@ function ensureReaderDocumentListeners(doc: Document): void {
     const key = (event as KeyboardEvent).key;
     if (key === "Enter" || key === " ") activate(event);
   };
+  const activity: EventListener = () => markReaderDocumentActive(doc);
+  const focus: EventListener = () => setReaderDocumentFocus(doc, true);
+  const blur: EventListener = () => setReaderDocumentFocus(doc, false);
+  const visibilityChange: EventListener = () =>
+    setReaderDocumentFocus(doc, !doc.hidden);
+  const pageHide: EventListener = () => void closeReaderDocument(doc);
   doc.addEventListener("click", click, true);
   doc.addEventListener("keydown", keyDown, true);
+  doc.addEventListener("pointerdown", activity, true);
+  doc.addEventListener("pointermove", activity, true);
+  doc.addEventListener("wheel", activity, true);
+  doc.addEventListener("focus", focus, true);
+  doc.addEventListener("blur", blur, true);
+  doc.addEventListener("visibilitychange", visibilityChange, true);
+  doc.addEventListener("pagehide", pageHide, true);
   readerDocumentListeners.add(doc);
+}
+
+function registerReaderTimingSession(
+  readerID: string,
+  target: Zotero.Item,
+  doc: Document,
+): void {
+  const now = Date.now();
+  readerTimingSessions.set(readerID, {
+    readerID,
+    target,
+    doc,
+    lastActivityAt: now,
+    focused: !doc.hidden,
+  });
+  if (!readingDurationBuffers.has(target.id)) {
+    readingDurationBuffers.set(target.id, {
+      target,
+      lastTickAt: now,
+      pendingSeconds: 0,
+    });
+  }
+  if (!readingTimer)
+    readingTimer = setInterval(tickReadingDurations, READING_TICK_MS);
+}
+
+function markReaderDocumentActive(doc: Document): void {
+  const now = Date.now();
+  for (const session of readerTimingSessions.values()) {
+    if (session.doc !== doc) continue;
+    session.lastActivityAt = now;
+    session.focused = !doc.hidden;
+  }
+}
+
+function setReaderDocumentFocus(doc: Document, focused: boolean): void {
+  for (const session of readerTimingSessions.values()) {
+    if (session.doc === doc) session.focused = focused;
+  }
+}
+
+function tickReadingDurations(): void {
+  const now = Date.now();
+  for (const buffer of readingDurationBuffers.values()) {
+    const active = [...readerTimingSessions.values()].some(
+      (session) =>
+        session.target.id === buffer.target.id &&
+        session.focused &&
+        now - session.lastActivityAt <= READING_IDLE_MS,
+    );
+    const elapsedSeconds = Math.floor((now - buffer.lastTickAt) / 1000);
+    buffer.lastTickAt = now;
+    if (active && elapsedSeconds > 0) buffer.pendingSeconds += elapsedSeconds;
+    if (buffer.pendingSeconds >= READING_FLUSH_SECONDS)
+      void flushReadingDuration(buffer.target.id);
+  }
+}
+
+async function closeReaderDocument(doc: Document): Promise<void> {
+  tickReadingDurations();
+  const targetIDs = new Set<number>();
+  for (const [readerID, session] of readerTimingSessions) {
+    if (session.doc !== doc) continue;
+    targetIDs.add(session.target.id);
+    readerTimingSessions.delete(readerID);
+  }
+  for (const itemID of targetIDs) {
+    await flushReadingDuration(itemID);
+    if (
+      ![...readerTimingSessions.values()].some(
+        (session) => session.target.id === itemID,
+      )
+    )
+      readingDurationBuffers.delete(itemID);
+  }
+  if (!readerTimingSessions.size && readingTimer) {
+    clearInterval(readingTimer);
+    readingTimer = undefined;
+  }
+}
+
+async function flushReadingDuration(itemID: number): Promise<void> {
+  const buffer = readingDurationBuffers.get(itemID);
+  if (!buffer || !buffer.pendingSeconds) return;
+  const seconds = buffer.pendingSeconds;
+  buffer.pendingSeconds = 0;
+  try {
+    await addReadingSeconds(buffer.target, seconds);
+    for (const session of readerTimingSessions.values()) {
+      if (session.target.id === itemID)
+        updateReaderButtons(session.doc, itemID);
+    }
+  } catch (error) {
+    buffer.pendingSeconds += seconds;
+    reportPluginError(error, {
+      feature: "阅读状态",
+      operation: "保存阅读时长",
+      userMessage: "保存阅读时长失败。",
+      notify: false,
+      metadata: { itemID, seconds },
+    });
+  }
 }
 
 async function toggleReaderStatus(
@@ -174,13 +322,21 @@ function updateReaderButtons(
 
 function updateReaderButton(
   button: HTMLButtonElement,
-  status: { read: boolean; readAt?: string },
+  status: ReadingStatus,
 ): void {
   button.disabled = false;
-  button.textContent = status.read ? "✓ 已读" : "○ 标记已读";
-  button.title = status.read
-    ? `${formatReadAt(status.readAt)}；单击恢复未读`
-    : "单击标记为已读";
+  const duration = formatReadingDuration(status.readingSeconds);
+  button.textContent = status.read
+    ? `✓ ${formatReadAtShort(status.readAt)}${duration ? ` · ${duration}` : ""}`
+    : `○ 标记已读${duration ? ` · ${duration}` : ""}`;
+  button.title = [
+    status.read
+      ? `${formatReadAt(status.readAt)}；单击恢复未读`
+      : "单击标记为已读",
+    duration ? `累计有效阅读时长：${duration}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
   button.setAttribute("aria-pressed", String(status.read));
 }
 

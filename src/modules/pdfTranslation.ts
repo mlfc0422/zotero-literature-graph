@@ -4,6 +4,7 @@ import type { FreeWebTranslationProvider } from "../features/pdfTranslate/freeCo
 import { zoteroPreferenceStore } from "../platform/zoteroServices";
 
 const PREF_PREFIX = "extensions.zotero.zoteropuls.ai.";
+const PROVIDER_ORDER_PREF = `${PREF_PREFIX}translate.providerOrder`;
 
 export type PdfTranslationProvider = FreeWebTranslationProvider | "google-free";
 
@@ -15,8 +16,36 @@ export const PDF_TRANSLATION_PROVIDER_ORDER: PdfTranslationProvider[] = [
   "iciba",
 ];
 
+export function normalizePdfTranslationProviderOrder(
+  value: unknown,
+): PdfTranslationProvider[] {
+  const requested = Array.isArray(value) ? value : [];
+  const valid = requested.filter(
+    (provider): provider is PdfTranslationProvider =>
+      PDF_TRANSLATION_PROVIDER_ORDER.includes(
+        provider as PdfTranslationProvider,
+      ),
+  );
+  return [
+    ...new Set(valid),
+    ...PDF_TRANSLATION_PROVIDER_ORDER.filter(
+      (provider) => !valid.includes(provider),
+    ),
+  ];
+}
+
+export function getPdfTranslationProviderOrder(): PdfTranslationProvider[] {
+  const raw = zoteroPreferenceStore.get(PROVIDER_ORDER_PREF, "");
+  if (typeof raw !== "string") return normalizePdfTranslationProviderOrder([]);
+  try {
+    return normalizePdfTranslationProviderOrder(JSON.parse(raw));
+  } catch {
+    return normalizePdfTranslationProviderOrder([]);
+  }
+}
+
 export function getEnabledPdfTranslationProviders(): PdfTranslationProvider[] {
-  return PDF_TRANSLATION_PROVIDER_ORDER.filter(
+  return getPdfTranslationProviderOrder().filter(
     (provider) =>
       zoteroPreferenceStore.get(
         `${PREF_PREFIX}translate.${provider}.enabled`,

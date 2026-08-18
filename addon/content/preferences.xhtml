@@ -34,7 +34,16 @@
     color: #fff; font-size: 12px; line-height: 1.45; box-shadow: 0 4px 14px
     rgba(0, 0, 0, 0.22); pointer-events: none; } #zotero-puls-ai-prompt {
     box-sizing: border-box; width: min(720px, 100%); min-height: 140px; resize:
-    vertical; } ]]>
+    vertical; } .puls-translation-provider-list { grid-column: 2; display: grid;
+    gap: 6px; width: min(520px, 100%); } .puls-translation-provider { display:
+    grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items:
+    center; padding: 6px 8px; border: 1px solid color-mix(in srgb, currentColor
+    12%, transparent); border-radius: 6px; background: color-mix(in srgb,
+    currentColor 2%, transparent); } .puls-translation-provider label { margin:
+    0; } .puls-priority-controls { display: flex; gap: 3px; }
+    .puls-priority-controls button { min-width: 28px; height: 24px; padding: 0
+    6px; font-weight: 700; } .puls-translation-priority-hint { grid-column: 2;
+    color: #667085; font-size: 0.92em; } ]]>
   </html:style>
   <groupbox>
     <label><html:h2>Zotero Puls</html:h2></label>
@@ -142,43 +151,131 @@
           <html:option value="ja">&#26085;&#26412;&#35486;</html:option>
         </html:select>
       </html:label>
-      <html:label class="puls-checkbox-field">
-        <html:input
-          id="zotero-puls-ai-translate-google-free-enabled"
-          type="checkbox"
-        />
-        &#21551;&#29992; Google Translate
-      </html:label>
-      <html:label class="puls-checkbox-field">
-        <html:input
-          id="zotero-puls-ai-translate-huoshan-web-enabled"
-          type="checkbox"
-        />
-        &#21551;&#29992; &#28779;&#23665;&#32593;&#39029;&#32763;&#35793;
-      </html:label>
-      <html:label class="puls-checkbox-field">
-        <html:input
-          id="zotero-puls-ai-translate-tencent-transmart-enabled"
-          type="checkbox"
-        />
-        &#21551;&#29992; &#33150;&#35759; Transmart
-      </html:label>
-      <html:label class="puls-checkbox-field">
-        <html:input
-          id="zotero-puls-ai-translate-cnki-enabled"
-          type="checkbox"
-        />
-        &#21551;&#29992; &#30693;&#32593;&#32763;&#35793;
-      </html:label>
-      <html:label class="puls-checkbox-field">
-        <html:input
-          id="zotero-puls-ai-translate-iciba-enabled"
-          type="checkbox"
-        />
-        &#21551;&#29992; &#29233;&#35789;&#38712;&#32763;&#35793;
-      </html:label>
-      <html:span class="puls-package-description"
-        >&#21487;&#21516;&#26102;&#21551;&#29992;&#22810;&#20010;&#26381;&#21153;&#65292;&#25554;&#20214;&#20250;&#25353;&#39029;&#38754;&#39034;&#24207;&#20381;&#27425;&#23581;&#35797;&#12290;&#36825;&#20123;&#26381;&#21153;&#20351;&#29992;&#21508;&#24179;&#21488;&#30340;&#20844;&#24320;&#32593;&#39029;&#25509;&#21475;&#65292;&#21487;&#33021;&#22240;&#26381;&#21153;&#35843;&#25972;&#32780;&#22833;&#25928;&#12290;</html:span
+      <html:span class="puls-field-label"
+        >&#26381;&#21153;&#20248;&#20808;&#32423;</html:span
+      >
+      <html:div
+        id="zotero-puls-ai-translate-provider-list"
+        class="puls-translation-provider-list"
+      >
+        <html:div class="puls-translation-provider" data-provider="google-free">
+          <html:label
+            ><html:input
+              id="zotero-puls-ai-translate-google-free-enabled"
+              type="checkbox"
+            />
+            &#21551;&#29992; Google Translate</html:label
+          >
+          <html:div class="puls-priority-controls"
+            ><html:button
+              type="button"
+              data-priority-action="up"
+              title="&#19978;&#31227;"
+              >&#8593;</html:button
+            ><html:button
+              type="button"
+              data-priority-action="down"
+              title="&#19979;&#31227;"
+              >&#8595;</html:button
+            ></html:div
+          >
+        </html:div>
+        <html:div class="puls-translation-provider" data-provider="huoshan-web">
+          <html:label
+            ><html:input
+              id="zotero-puls-ai-translate-huoshan-web-enabled"
+              type="checkbox"
+            />
+            &#21551;&#29992;
+            &#28779;&#23665;&#32593;&#39029;&#32763;&#35793;</html:label
+          >
+          <html:div class="puls-priority-controls"
+            ><html:button
+              type="button"
+              data-priority-action="up"
+              title="&#19978;&#31227;"
+              >&#8593;</html:button
+            ><html:button
+              type="button"
+              data-priority-action="down"
+              title="&#19979;&#31227;"
+              >&#8595;</html:button
+            ></html:div
+          >
+        </html:div>
+        <html:div
+          class="puls-translation-provider"
+          data-provider="tencent-transmart"
+        >
+          <html:label
+            ><html:input
+              id="zotero-puls-ai-translate-tencent-transmart-enabled"
+              type="checkbox"
+            />
+            &#21551;&#29992; &#33150;&#35759; Transmart</html:label
+          >
+          <html:div class="puls-priority-controls"
+            ><html:button
+              type="button"
+              data-priority-action="up"
+              title="&#19978;&#31227;"
+              >&#8593;</html:button
+            ><html:button
+              type="button"
+              data-priority-action="down"
+              title="&#19979;&#31227;"
+              >&#8595;</html:button
+            ></html:div
+          >
+        </html:div>
+        <html:div class="puls-translation-provider" data-provider="cnki">
+          <html:label
+            ><html:input
+              id="zotero-puls-ai-translate-cnki-enabled"
+              type="checkbox"
+            />
+            &#21551;&#29992; &#30693;&#32593;&#32763;&#35793;</html:label
+          >
+          <html:div class="puls-priority-controls"
+            ><html:button
+              type="button"
+              data-priority-action="up"
+              title="&#19978;&#31227;"
+              >&#8593;</html:button
+            ><html:button
+              type="button"
+              data-priority-action="down"
+              title="&#19979;&#31227;"
+              >&#8595;</html:button
+            ></html:div
+          >
+        </html:div>
+        <html:div class="puls-translation-provider" data-provider="iciba">
+          <html:label
+            ><html:input
+              id="zotero-puls-ai-translate-iciba-enabled"
+              type="checkbox"
+            />
+            &#21551;&#29992;
+            &#29233;&#35789;&#38712;&#32763;&#35793;</html:label
+          >
+          <html:div class="puls-priority-controls"
+            ><html:button
+              type="button"
+              data-priority-action="up"
+              title="&#19978;&#31227;"
+              >&#8593;</html:button
+            ><html:button
+              type="button"
+              data-priority-action="down"
+              title="&#19979;&#31227;"
+              >&#8595;</html:button
+            ></html:div
+          >
+        </html:div>
+      </html:div>
+      <html:span class="puls-translation-priority-hint"
+        >&#21487;&#21516;&#26102;&#21551;&#29992;&#22810;&#20010;&#26381;&#21153;&#12290;&#25353;&#19978;&#19979;&#31661;&#22836;&#35843;&#25972;&#20248;&#20808;&#32423;&#65307;&#20165;&#23581;&#35797;&#24050;&#21551;&#29992;&#30340;&#26381;&#21153;&#65292;&#39318;&#27425;&#25104;&#21151;&#21518;&#20572;&#27490;&#12290;</html:span
       >
     </html:div>
   </groupbox>

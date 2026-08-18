@@ -497,6 +497,60 @@ Output JSON only, with no explanation or additional text:
     "cnki",
     "iciba",
   ],
+  getPdfTranslationProviderOrder() {
+    const raw = Zotero.Prefs.get(`${this.prefix}translate.providerOrder`, true);
+    try {
+      const parsed = JSON.parse(raw || "[]");
+      const requested = Array.isArray(parsed) ? parsed : [];
+      const valid = requested.filter((provider) =>
+        this.pdfTranslationProviders.includes(provider),
+      );
+      return [
+        ...new Set(valid),
+        ...this.pdfTranslationProviders.filter(
+          (provider) => !valid.includes(provider),
+        ),
+      ];
+    } catch {
+      return [...this.pdfTranslationProviders];
+    }
+  },
+  persistPdfTranslationProviderOrder(order) {
+    Zotero.Prefs.set(
+      `${this.prefix}translate.providerOrder`,
+      JSON.stringify(order),
+      true,
+    );
+  },
+  applyPdfTranslationProviderOrder(order) {
+    const list = this.get("translate-provider-list");
+    const rows = new Map(
+      Array.from(list.querySelectorAll("[data-provider]")).map((row) => [
+        row.dataset.provider,
+        row,
+      ]),
+    );
+    order.forEach((provider, index) => {
+      const row = rows.get(provider);
+      if (!row) return;
+      list.appendChild(row);
+      row
+        .querySelector('[data-priority-action="up"]')
+        ?.toggleAttribute("disabled", index === 0);
+      row
+        .querySelector('[data-priority-action="down"]')
+        ?.toggleAttribute("disabled", index === order.length - 1);
+    });
+  },
+  movePdfTranslationProvider(provider, offset) {
+    const order = this.getPdfTranslationProviderOrder();
+    const index = order.indexOf(provider);
+    const next = index + offset;
+    if (index < 0 || next < 0 || next >= order.length) return;
+    [order[index], order[next]] = [order[next], order[index]];
+    this.persistPdfTranslationProviderOrder(order);
+    this.applyPdfTranslationProviderOrder(order);
+  },
   initPdfTranslationServices() {
     this.pdfTranslationProviders.forEach((provider) => {
       const enabled = this.get(`translate-${provider}-enabled`);
@@ -549,6 +603,18 @@ Output JSON only, with no explanation or additional text:
         );
       });
       updateVisibility();
+    });
+    const order = this.getPdfTranslationProviderOrder();
+    this.applyPdfTranslationProviderOrder(order);
+    this.get("translate-provider-list").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-priority-action]");
+      if (!button) return;
+      const provider = button.closest("[data-provider]")?.dataset.provider;
+      if (!provider) return;
+      this.movePdfTranslationProvider(
+        provider,
+        button.dataset.priorityAction === "up" ? -1 : 1,
+      );
     });
   },
   normalizeTranslateTargetLanguage(value) {
