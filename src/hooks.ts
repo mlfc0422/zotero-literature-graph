@@ -33,6 +33,16 @@ import {
   registerPdfTranslateFeature,
   unregisterPdfTranslateFeature,
 } from "./features/pdfTranslate/register";
+import {
+  registerReadingStatusFeature,
+  registerReadingStatusReaderFeature,
+  shutdownReadingStatusFeature,
+  unregisterReadingStatusFeature,
+} from "./features/readingStatus/register";
+import {
+  getRecentPluginErrors,
+  reportPluginError,
+} from "./platform/errorReporter";
 
 async function onStartup(): Promise<void> {
   await Promise.all([
@@ -48,6 +58,7 @@ async function onStartup(): Promise<void> {
   registerEasyScholarNotifier();
   registerCollectionCountNotifier();
   registerPdfTranslateFeature();
+  registerReadingStatusReaderFeature();
   addon.data.initialized = true;
 }
 
@@ -58,6 +69,7 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
   registerEasyScholarFeature(win);
   registerPublicationResolverFeature(win);
   registerCollectionCountFeature(win);
+  registerReadingStatusFeature(win);
 }
 
 async function onMainWindowUnload(win: Window): Promise<void> {
@@ -66,6 +78,7 @@ async function onMainWindowUnload(win: Window): Promise<void> {
   unregisterEasyScholarFeature(win);
   unregisterPublicationResolverFeature(win);
   unregisterCollectionCountFeature(win);
+  unregisterReadingStatusFeature(win);
 }
 
 function onShutdown(): void {
@@ -73,6 +86,7 @@ function onShutdown(): void {
   shutdownEasyScholarFeature();
   shutdownCollectionCountFeature();
   unregisterPdfTranslateFeature();
+  shutdownReadingStatusFeature();
   for (const win of Zotero.getMainWindows()) void onMainWindowUnload(win);
   ztoolkit.unregisterAll();
   addon.data.alive = false;
@@ -87,4 +101,6 @@ export const pluginApi = {
   findPublishedVersion,
   openGraphWindow: (win?: _ZoteroTypes.MainWindow) =>
     graphWindowController.openOrRefresh(win),
+  reportError: reportPluginError,
+  getRecentErrors: getRecentPluginErrors,
 };
