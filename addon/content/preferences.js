@@ -653,9 +653,19 @@ Output JSON only, with no explanation or additional text:
       );
       this.persistModel();
     } catch (error) {
-      alert(
-        `\u83b7\u53d6 OpenAI \u6a21\u578b\u5931\u8d25\uff1a${error.message || error}`,
-      );
+      const reporter = Zotero.ZoteroPuls?.api?.reportError;
+      if (reporter) {
+        reporter(error, {
+          feature: "\u8bbe\u7f6e",
+          operation: "\u83b7\u53d6 OpenAI \u53ef\u7528\u6a21\u578b",
+          userMessage: "\u83b7\u53d6 OpenAI \u6a21\u578b\u5931\u8d25\u3002",
+          window: Zotero.getMainWindow(),
+        });
+      } else {
+        alert(
+          `\u83b7\u53d6 OpenAI \u6a21\u578b\u5931\u8d25\uff1a${error.message || error}`,
+        );
+      }
     } finally {
       button.disabled = false;
       button.textContent = "\u83b7\u53d6\u53ef\u7528\u6a21\u578b";

@@ -1,5 +1,6 @@
 import { translatePdfSelection } from "../../modules/pdfTranslation";
 import { zoteroPreferenceStore } from "../../platform/zoteroServices";
+import { reportPluginError } from "../../platform/errorReporter";
 
 const PREF_KEY = "extensions.zotero.zoteropuls.ai.pdfAutoTranslate";
 const selectionTokens = new Map<string, number>();
@@ -60,7 +61,13 @@ async function translateSelection(
       panel.textContent = translation;
   } catch (error) {
     if (selectionTokens.get(readerID) !== token || !panel.isConnected) return;
-    const message = error instanceof Error ? error.message : String(error);
-    panel.textContent = `翻译失败：${message}`;
+    const reported = reportPluginError(error, {
+      feature: "PDF 翻译",
+      operation: "翻译选中文本",
+      userMessage: "PDF 翻译失败。",
+      notify: false,
+      metadata: { readerID },
+    });
+    panel.textContent = `翻译失败 [${reported.id}]：${reported.message}`;
   }
 }

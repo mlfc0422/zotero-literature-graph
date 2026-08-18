@@ -4,6 +4,7 @@ import {
   isEasyScholarConfigured,
   updateEasyScholarItem,
 } from "../../modules/easyScholar";
+import { reportPluginError } from "../../platform/errorReporter";
 import {
   classifyEasyScholarValue,
   extractEasyScholarSummary,
@@ -159,7 +160,13 @@ async function runAutomaticUpdate(
     watchForMetadataChanges(itemID, signature, expiresAt);
   } catch (error) {
     pendingAutoUpdates.delete(itemID);
-    ztoolkit.log("EasyScholar automatic update failed", error);
+    reportPluginError(error, {
+      feature: "EasyScholar",
+      operation: "自动更新期刊信息",
+      userMessage: "EasyScholar 自动更新失败。",
+      notify: false,
+      metadata: { itemID },
+    });
   }
 }
 
@@ -222,9 +229,13 @@ async function runUpdate(win: _ZoteroTypes.MainWindow): Promise<void> {
         : `EasyScholar 未找到该期刊或会议。\n\n已尝试：\n${attempted}`,
     );
   } catch (error) {
-    win.alert(
-      `更新 EasyScholar 信息失败：${error instanceof Error ? error.message : error}`,
-    );
+    reportPluginError(error, {
+      feature: "EasyScholar",
+      operation: "手动更新期刊信息",
+      userMessage: "更新 EasyScholar 信息失败。",
+      window: win,
+      metadata: { itemID: item.id },
+    });
   }
 }
 

@@ -1,4 +1,5 @@
 import { graphWindowController } from "../../modules/graphWindow";
+import { reportPluginError } from "../../platform/errorReporter";
 
 const TOOLBAR_BUTTON_ID = "zotero-puls-graph-button";
 
@@ -10,7 +11,13 @@ export function registerGraphFeature(win: _ZoteroTypes.MainWindow): void {
     doc.getElementById("zotero-items-toolbar") ||
     doc.getElementById("zotero-items-toolbar-container");
   if (!toolbar) {
-    ztoolkit.log("Could not find Zotero items toolbar");
+    reportPluginError(new Error("未找到 Zotero 文献列表工具栏"), {
+      feature: "关系网",
+      operation: "注册工具栏按钮",
+      userMessage: "关系网按钮注册失败。",
+      window: win,
+      notify: false,
+    });
     return;
   }
 

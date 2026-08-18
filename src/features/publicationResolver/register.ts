@@ -3,6 +3,7 @@ import {
   findPublishedVersion,
   isArxivItem,
 } from "../../modules/publicationResolver";
+import { reportPluginError } from "../../platform/errorReporter";
 
 const MENU_ID = "zotero-puls-find-published-version";
 
@@ -59,9 +60,13 @@ async function runLookup(win: _ZoteroTypes.MainWindow): Promise<void> {
       win.alert("正式发表版本信息已补充到当前条目。");
     }
   } catch (error) {
-    win.alert(
-      `查找正式发表版本失败：${error instanceof Error ? error.message : error}`,
-    );
+    reportPluginError(error, {
+      feature: "正式版本识别",
+      operation: "查找并写入正式版本",
+      userMessage: "查找正式发表版本失败。",
+      window: win,
+      metadata: { itemID: item.id },
+    });
   }
 }
 

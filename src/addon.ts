@@ -2,6 +2,10 @@ import { config } from "../package.json";
 import type { GraphData } from "./modules/graphData";
 import hooks, { pluginApi } from "./hooks";
 import { createZToolkit } from "./utils/ztoolkit";
+import type {
+  PluginErrorContext,
+  PluginErrorRecord,
+} from "./platform/errorReporter";
 
 class Addon {
   public data: {
@@ -21,6 +25,11 @@ class Addon {
   public api: {
     buildCurrentCollectionGraph: (win?: _ZoteroTypes.MainWindow) => GraphData;
     openGraphWindow: (win?: _ZoteroTypes.MainWindow) => void;
+    reportError: (
+      error: unknown,
+      context: PluginErrorContext,
+    ) => PluginErrorRecord;
+    getRecentErrors: () => readonly PluginErrorRecord[];
   };
 
   constructor() {
@@ -36,6 +45,8 @@ class Addon {
       buildCurrentCollectionGraph: (win) =>
         pluginApi.buildCurrentCollectionGraph(win),
       openGraphWindow: (win) => pluginApi.openGraphWindow(win),
+      reportError: (error, context) => pluginApi.reportError(error, context),
+      getRecentErrors: () => pluginApi.getRecentErrors(),
     };
   }
 }

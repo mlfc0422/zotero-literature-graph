@@ -11,6 +11,7 @@ import { GRAPH_WINDOW_STYLES } from "../features/graph/styles";
 import { createCytoscapeStyles } from "../features/graph/cytoscapeStyles";
 import { installBrowserGlobals } from "../platform/browserGlobals";
 import { focusAndSelectItem, getMainWindow } from "../platform/zoteroWindows";
+import { reportPluginError } from "../platform/errorReporter";
 
 let createCytoscape: typeof cytoscape | undefined;
 
@@ -59,8 +60,16 @@ export class GraphWindowController {
           this.buildShell(dialog.window.document);
           void this.refresh(activeSourceWin);
         } catch (error) {
-          ztoolkit.log("Failed to initialize graph window", error);
-          this.showFatalError(error);
+          const reported = reportPluginError(error, {
+            feature: "关系网",
+            operation: "初始化图谱窗口",
+            userMessage: "关系网窗口初始化失败。",
+            window: activeSourceWin,
+            notify: false,
+          });
+          this.showFatalError(
+            new Error(`[${reported.id}] ${reported.message}`),
+          );
         }
       },
       unloadCallback: () => this.disposeWindow(),
@@ -95,12 +104,19 @@ export class GraphWindowController {
       this.data = buildCurrentCollectionGraph(sourceWin ?? getMainWindow());
       await this.render(this.data);
     } catch (error) {
-      ztoolkit.log("Failed to build or render author-tag graph", error);
-      const detail = error instanceof Error ? `：${error.message}` : "";
+      if (error instanceof GraphDataError) {
+        this.showEmpty(error.message);
+        return;
+      }
+      const reported = reportPluginError(error, {
+        feature: "关系网",
+        operation: "读取并渲染当前分类",
+        userMessage: "读取或渲染当前分类失败。",
+        window: sourceWin,
+        notify: false,
+      });
       this.showEmpty(
-        error instanceof GraphDataError
-          ? error.message
-          : `读取或渲染当前分类时发生错误${detail}`,
+        `读取或渲染当前分类时发生错误 [${reported.id}]：${reported.message}`,
       );
     }
   }

@@ -3,6 +3,7 @@ import {
   previewAiTags,
   replaceManualTags,
 } from "../../modules/aiTagging";
+import { reportPluginError } from "../../platform/errorReporter";
 
 const AI_TAG_MENU_ID = "zotero-puls-ai-tag-menuitem";
 
@@ -42,9 +43,13 @@ async function runAiTagging(win: _ZoteroTypes.MainWindow): Promise<void> {
       return;
     await replaceManualTags(item, tags);
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "生成标签时发生未知错误";
-    win.alert(`AI 生成标签失败：${message}`);
+    reportPluginError(error, {
+      feature: "AI 标签",
+      operation: "生成并写入标签",
+      userMessage: "AI 生成标签失败。",
+      window: win,
+      metadata: { itemID: item.id },
+    });
   }
 }
 
